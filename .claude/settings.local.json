@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/azatg/Desktop/diplomka/oqyrman-admin/app -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(find /c/Users/azatg/Desktop/diplomka/oqyrman-admin -maxdepth 2 -type f \\\\\\(-name middleware.ts -o -name *.css -o -name next.config.* -o -name tsconfig.json -o -name package.json \\\\\\))",
+      "Bash(find /c/Users/azatg/Desktop/diplomka/oqyrman-admin -maxdepth 2 -type f \\\\\\(-name tailwind.config.* -o -name postcss.config.* -o -name next.config.* \\\\\\))",
+      "Bash(grep -r email /c/Users/azatg/Desktop/diplomka/oqyrman-admin/lib/ /c/Users/azatg/Desktop/diplomka/oqyrman-admin/app/ --include=*.ts --include=*.tsx)",
+      "Bash(grep -r api. /c/Users/azatg/Desktop/diplomka/oqyrman-admin/app/ --include=*.tsx --include=*.ts)",
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
