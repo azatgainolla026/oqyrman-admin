@@ -142,6 +142,7 @@ export default function BooksPage() {
       description: book.description,
       language: book.language,
       year: book.year,
+      total_pages: book.total_pages,
     })
     setModalOpen(true)
   }
@@ -292,6 +293,7 @@ export default function BooksPage() {
       render: (_, record) => record.genre?.name ?? '—',
     },
     { title: 'Year', dataIndex: 'year', key: 'year', width: 70 },
+    { title: 'Pages', dataIndex: 'total_pages', key: 'total_pages', width: 80, align: 'center', render: (v: number) => v ?? '—' },
     { title: 'ISBN', dataIndex: 'isbn', key: 'isbn', width: 160 },
     { title: 'Language', dataIndex: 'language', key: 'language', width: 90, align: 'center' },
     {
@@ -453,6 +455,12 @@ export default function BooksPage() {
               <InputNumber className="!w-full" />
             </Form.Item>
           </div>
+
+          {editing && (
+            <Form.Item name="total_pages" label="Total Pages">
+              <InputNumber min={1} className="!w-full" placeholder="e.g. 320" />
+            </Form.Item>
+          )}
 
           {!editing && (
             <>

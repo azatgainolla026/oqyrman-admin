@@ -228,12 +228,14 @@ export default function UsersPage() {
           <Button size="small" onClick={() => openEditModal(record)}>
             Edit User
           </Button>
-          <Popconfirm
-            title="Delete this user?"
-            onConfirm={() => handleDelete(record.id)}
-          >
-            <Button danger size="small" icon={<DeleteOutlined />} />
-          </Popconfirm>
+          {record.role !== 'Admin' && (
+            <Popconfirm
+              title="Delete this user?"
+              onConfirm={() => handleDelete(record.id)}
+            >
+              <Button danger size="small" icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
