@@ -19,7 +19,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, PictureOutlined, FileTextOutlined, BookOutlined, UploadOutlined, SearchOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import api from '@/lib/api'
-import type { Book, BookViewResponse, BookFile, Author, Genre, PaginatedResponse } from '@/lib/types'
+import type { Book, BookViewResponse, Author, Genre, PaginatedResponse } from '@/lib/types'
 
 const { Title } = Typography
 
@@ -36,12 +36,10 @@ export default function BooksPage() {
   const [fileModalOpen, setFileModalOpen] = useState(false)
   const [fileUploadBookId, setFileUploadBookId] = useState<string>('')
   const [fileUploadFile, setFileUploadFile] = useState<File | null>(null)
-  const [bookFilesMap, setBookFilesMap] = useState<Record<string, BookFile[]>>({})
   const [createCoverFile, setCreateCoverFile] = useState<File | null>(null)
   const [createBookFile, setCreateBookFile] = useState<File | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [genreFilter, setGenreFilter] = useState<string | undefined>(undefined)
-  const [fileForm] = Form.useForm()
   const [form] = Form.useForm()
   const pageSize = 20
 
@@ -80,20 +78,7 @@ export default function BooksPage() {
       setBooks(filteredItems)
       setTotal(isGenreEndpoint && !serverHasPagination ? items.length : dataObj.total ?? filteredItems.length)
 
-      // Fetch book files for each book
-      const filesMap: Record<string, BookFile[]> = {}
-      await Promise.all(
-        filteredItems.map(async (book) => {
-          try {
-            const res = await api.get(`/book-files/book/${book.id}`)
-            const files = Array.isArray(res.data) ? res.data : res.data.items ?? []
-            filesMap[book.id] = files
-          } catch {
-            filesMap[book.id] = []
-          }
-        })
-      )
-      setBookFilesMap(filesMap)
+      // Do NOT prefetch files per book here (would be N+1 requests).
     } catch {
       message.error('Failed to load books')
     } finally {
@@ -103,6 +88,9 @@ export default function BooksPage() {
 
   useEffect(() => {
     fetchBooks(page, searchQuery, genreFilter)
+  }, [page, fetchBooks, searchQuery, genreFilter])
+
+  useEffect(() => {
     // Load authors and genres for the form selects
     api
       .get<PaginatedResponse<Author>>('/authors', { params: { limit: 200 } })
@@ -110,7 +98,7 @@ export default function BooksPage() {
     api.get('/genres').then(({ data }) => {
       setGenres(Array.isArray(data) ? data : data.items ?? [])
     })
-  }, [page, fetchBooks])
+  }, [])
 
   const handleSearch = (value: string) => {
     setSearchQuery(value)
@@ -175,12 +163,10 @@ export default function BooksPage() {
         message.success('Book created')
 
         // Upload book file if provided
-        if (createBookFile && values.file_format) {
+        if (createBookFile) {
           const fileData = new FormData()
           fileData.append('book_id', newBook.id)
-          fileData.append('format', values.file_format)
           fileData.append('file', createBookFile)
-          if (values.file_total_pages) fileData.append('total_pages', String(values.file_total_pages))
           try {
             await api.post('/admin/book-files/upload', fileData)
             message.success('Book file uploaded')
@@ -223,23 +209,17 @@ export default function BooksPage() {
   const openFileUpload = (bookId: string) => {
     setFileUploadBookId(bookId)
     setFileUploadFile(null)
-    fileForm.resetFields()
     setFileModalOpen(true)
   }
 
   const handleFileUpload = async () => {
-    const values = await fileForm.validateFields()
     if (!fileUploadFile) {
       message.error('Please select a file')
       return
     }
     const formData = new FormData()
     formData.append('book_id', fileUploadBookId)
-    formData.append('format', values.format)
     formData.append('file', fileUploadFile)
-    if (values.total_pages) {
-      formData.append('total_pages', String(values.total_pages))
-    }
     try {
       await api.post('/admin/book-files/upload', formData)
       message.success('File uploaded')
@@ -305,25 +285,6 @@ export default function BooksPage() {
       render: (val: number) => val?.toFixed(1) ?? '—',
     },
     {
-      title: 'Files',
-      key: 'files_status',
-      width: 90,
-      align: 'center',
-      render: (_, record) => {
-        const files = bookFilesMap[record.id] || []
-        if (files.length === 0) return <span className="text-gray-300">—</span>
-        return (
-          <Space size={4}>
-            {files.map((f) => (
-              <span key={f.id} className="text-green-500 text-xs font-medium uppercase">
-                {f.format}
-              </span>
-            ))}
-          </Space>
-        )
-      },
-    },
-    {
       title: 'Actions',
       key: 'actions',
       width: 180,
@@ -352,7 +313,7 @@ export default function BooksPage() {
             icon={<FileTextOutlined />}
             title="Upload book file"
             onClick={() => openFileUpload(record.id)}
-            className={(bookFilesMap[record.id]?.length ?? 0) > 0 ? '!text-green-500 !border-green-300' : ''}
+            className={record.file ? '!text-green-500 !border-green-300' : ''}
           />
           <Popconfirm
             title="Delete this book?"
@@ -488,20 +449,6 @@ export default function BooksPage() {
                 <Typography.Text type="secondary" className="block mb-3">
                   Book File (optional)
                 </Typography.Text>
-                <Form.Item name="file_format" label="File Format">
-                  <Select
-                    allowClear
-                    placeholder="Select format"
-                    options={[
-                      { value: 'pdf', label: 'PDF' },
-                      { value: 'epub', label: 'EPUB' },
-                      { value: 'mp3', label: 'MP3 (Audio)' },
-                    ]}
-                  />
-                </Form.Item>
-                <Form.Item name="file_total_pages" label="Total Pages (optional)">
-                  <InputNumber min={1} className="!w-full" placeholder="e.g. 320" />
-                </Form.Item>
                 <Upload
                   beforeUpload={(file) => {
                     setCreateBookFile(file)
@@ -525,20 +472,7 @@ export default function BooksPage() {
         onOk={handleFileUpload}
         onCancel={() => setFileModalOpen(false)}
       >
-        <Form form={fileForm} layout="vertical" className="mt-4">
-          <Form.Item name="format" label="Format" rules={[{ required: true }]}>
-            <Select
-              placeholder="Select format"
-              options={[
-                { value: 'pdf', label: 'PDF' },
-                { value: 'epub', label: 'EPUB' },
-                { value: 'mp3', label: 'MP3 (Audio)' },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="total_pages" label="Total Pages (optional)">
-            <InputNumber min={1} className="!w-full" placeholder="e.g. 320" />
-          </Form.Item>
+        <Form layout="vertical" className="mt-4">
           <Upload
             beforeUpload={(file) => {
               setFileUploadFile(file)

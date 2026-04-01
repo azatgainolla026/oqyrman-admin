@@ -63,6 +63,12 @@ export interface Book {
   year: number
   total_pages?: number
   avg_rating: number
+  book_file?: {
+    id: string
+    book_id: string
+    format: 'pdf' | 'epub' | 'mp3' | string
+    file_url: string
+  }
 }
 
 // GET /books returns this (nested author/genre)
@@ -78,6 +84,12 @@ export interface BookViewResponse {
   year: number
   total_pages?: number
   avg_rating: number
+  file?: {
+    id: string
+    book_id: string
+    format: 'pdf' | 'epub' | 'mp3' | string
+    file_url: string
+  }
 }
 
 export interface Author {

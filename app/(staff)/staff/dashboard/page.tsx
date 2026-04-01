@@ -112,6 +112,7 @@ export default function StaffDashboardPage() {
         { name: 'Cancelled', value: stats.cancelled_reservations },
       ]
     : []
+  const pieDataNonZero = pieData.filter((item) => item.value > 0)
 
   const barData = stats
     ? [
@@ -177,14 +178,15 @@ export default function StaffDashboardPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={pieData}
+                    data={pieDataNonZero}
                     cx="50%"
                     cy="50%"
                     outerRadius={100}
                     dataKey="value"
-                    label={({ name, value }) => `${name}: ${value}`}
+                    label={({ name, value }) => (value && value > 0 ? `${name}: ${value}` : '')}
+                    labelLine={false}
                   >
-                    {pieData.map((entry) => (
+                    {pieDataNonZero.map((entry) => (
                       <Cell
                         key={entry.name}
                         fill={RESERVATION_COLORS[entry.name as keyof typeof RESERVATION_COLORS]}

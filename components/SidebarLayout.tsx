@@ -174,7 +174,7 @@ export default function SidebarLayout({
           placement="left"
           open={mobileOpen}
           onClose={() => setMobileOpen(false)}
-          width={280}
+          size="default"
           styles={{
             body: { padding: 0, background: 'linear-gradient(180deg, #1a1d2e 0%, #13152b 100%)' },
             header: { display: 'none' },

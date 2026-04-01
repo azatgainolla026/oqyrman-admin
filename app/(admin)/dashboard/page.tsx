@@ -95,6 +95,7 @@ export default function DashboardPage() {
     { name: 'Pending', value: stats?.reservations_pending ?? 0 },
     { name: 'Completed', value: completedReservations },
   ]
+  const pieDataNonZero = pieData.filter((item) => item.value > 0)
 
   const barData = [
     { name: 'Users', value: stats?.users_total ?? 0 },
@@ -134,18 +135,19 @@ export default function DashboardPage() {
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
-                    data={pieData}
+                    data={pieDataNonZero}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
                     outerRadius={100}
                     paddingAngle={4}
                     dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                    label={({ name, percent, value }) =>
+                      value && value > 0 ? `${name} ${((percent ?? 0) * 100).toFixed(0)}%` : ''
                     }
+                    labelLine={false}
                   >
-                    {pieData.map((_, index) => (
+                    {pieDataNonZero.map((_, index) => (
                       <Cell
                         key={`cell-${index}`}
                         fill={PIE_COLORS[index % PIE_COLORS.length]}

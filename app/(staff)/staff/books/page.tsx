@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Table, Input, Typography, Tag, Select, message } from 'antd'
-import { SearchOutlined } from '@ant-design/icons'
+import { Table, Input, Typography, Tag, Select, message, Image } from 'antd'
+import { SearchOutlined, BookOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import api from '@/lib/api'
-import type { BookViewResponse, Genre, LibraryBookSearchItem } from '@/lib/types'
+import type { Genre, LibraryBookSearchItem } from '@/lib/types'
 import Cookies from 'js-cookie'
 
 const { Title } = Typography
@@ -14,14 +14,13 @@ interface EnrichedBook {
   library_book_id: string
   book_id: string
   title: string
-  author_id: string
-  isbn: string
-  language: string
+  author: string
+  genre?: string
   year: number
+  total_pages?: number
   cover_url?: string
   total_copies: number
   available_copies: number
-  genre?: string
 }
 
 export default function StaffBooksPage() {
@@ -62,72 +61,42 @@ export default function StaffBooksPage() {
     setLoading(true)
     try {
       const { data } = await api.get<unknown>(`/library-books/library/${libraryId}`)
-      const dataObj = data as { items?: Array<{
+      type LibraryBookViewApiItem = {
         id?: string
-        library_book_id?: string
-        book_id?: string
-        book?: { id?: string }
         available_copies?: number
         total_copies?: number
-      }> }
+        book?: {
+          id?: string
+          title?: string
+          year?: number
+          total_pages?: number
+          cover_url?: string
+          author?: { name?: string }
+          genre?: { name?: string }
+        }
+      }
 
-      const libraryBooks = (Array.isArray(data) ? data : dataObj.items) ?? []
+      const dataObj = data as { items?: unknown }
+      const itemsCandidate = (Array.isArray(data) ? data : (dataObj.items as unknown)) as unknown
+      const libraryBooks: LibraryBookViewApiItem[] = Array.isArray(itemsCandidate) ? (itemsCandidate as LibraryBookViewApiItem[]) : []
 
-      // Fetch book details for each library book
-      const enriched = await Promise.all(
-        libraryBooks.map(async (lb) => {
-          const libraryBookId = lb.id ?? lb.library_book_id ?? ''
-          const bookId = lb.book_id ?? lb.book?.id ?? ''
-          const availableCopies = lb.available_copies ?? 0
-          const totalCopies = lb.total_copies ?? 0
-
-          if (!libraryBookId || !bookId) {
-            return {
-              library_book_id: libraryBookId || (bookId ? `unknown-${bookId}` : 'unknown'),
-              book_id: bookId || '',
-              title: '—',
-              author_id: '',
-              isbn: '',
-              language: '',
-              year: 0,
-              cover_url: '',
-              total_copies: totalCopies,
-              available_copies: availableCopies,
-            }
-          }
-
-          try {
-            const { data: book } = await api.get<BookViewResponse>(`/books/${bookId}`)
-            return {
-              library_book_id: libraryBookId,
-              book_id: bookId,
-              title: book.title,
-              author_id: book.author?.id ?? '',
-              isbn: book.isbn,
-              language: book.language,
-              year: book.year,
-              cover_url: book.cover_url,
-              total_copies: totalCopies,
-              available_copies: availableCopies,
-              genre: book.genre?.name,
-            }
-          } catch {
-            return {
-              library_book_id: libraryBookId,
-              book_id: bookId,
-              title: '—',
-              author_id: '',
-              isbn: '',
-              language: '',
-              year: 0,
-              cover_url: '',
-              total_copies: totalCopies,
-              available_copies: availableCopies,
-              genre: undefined,
-            }
-          }
-        })
-      )
+      // Use nested `book` from the response to avoid N+1 requests to /books/{id}.
+      const enriched: EnrichedBook[] = libraryBooks.map((lb) => {
+        const libraryBookId = String(lb.id ?? '')
+        const bookId = String(lb.book?.id ?? '')
+        return {
+          library_book_id: libraryBookId || (bookId ? `unknown-${bookId}` : 'unknown'),
+          book_id: bookId,
+          title: String(lb.book?.title ?? '—'),
+          author: String(lb.book?.author?.name ?? '—'),
+          genre: lb.book?.genre?.name ? String(lb.book.genre.name) : undefined,
+          year: Number(lb.book?.year ?? 0),
+          total_pages: lb.book?.total_pages,
+          cover_url: lb.book?.cover_url,
+          total_copies: Number(lb.total_copies ?? 0),
+          available_copies: Number(lb.available_copies ?? 0),
+        }
+      })
 
       setAllBooks(enriched)
       setFiltered(enriched)
@@ -170,14 +139,13 @@ export default function StaffBooksPage() {
         library_book_id: item.library_book_id,
         book_id: item.book_id,
         title: item.title,
-        author_id: item.author ?? '',
-        isbn: '',
-        language: '',
+        author: item.author ?? '—',
         year: item.year,
         cover_url: item.cover_url,
         total_copies: item.total_copies,
         available_copies: item.available_copies,
         genre: item.genre,
+        total_pages: undefined,
       }))
 
       setFiltered(applyGenreFilter(mapped, selectedGenre))
@@ -202,10 +170,35 @@ export default function StaffBooksPage() {
   }
 
   const columns: ColumnsType<EnrichedBook> = [
+    {
+      title: 'Cover',
+      key: 'cover',
+      width: 70,
+      align: 'center',
+      render: (_, record) =>
+        record.cover_url ? (
+          <Image
+            src={record.cover_url}
+            alt={record.title}
+            width={40}
+            height={56}
+            style={{ objectFit: 'cover', borderRadius: 4 }}
+            preview={{ mask: false }}
+          />
+        ) : (
+          <div
+            className="flex items-center justify-center bg-gray-50 border border-gray-200 rounded mx-auto"
+            style={{ width: 40, height: 56 }}
+          >
+            <BookOutlined className="text-gray-300 text-lg" />
+          </div>
+        ),
+    },
     { title: 'Title', dataIndex: 'title', key: 'title' },
-    { title: 'ISBN', dataIndex: 'isbn', key: 'isbn' },
-    { title: 'Language', dataIndex: 'language', key: 'language', width: 100 },
+    { title: 'Author', dataIndex: 'author', key: 'author' },
+    { title: 'Genre', dataIndex: 'genre', key: 'genre', width: 140, ellipsis: true, render: (v: string | undefined) => v ?? '—' },
     { title: 'Year', dataIndex: 'year', key: 'year', width: 80 },
+    { title: 'Pages', dataIndex: 'total_pages', key: 'total_pages', width: 80, render: (v: number | undefined) => v ?? '—' },
     {
       title: 'Copies',
       key: 'copies',
@@ -265,7 +258,7 @@ export default function StaffBooksPage() {
         dataSource={filtered}
         rowKey="library_book_id"
         loading={loading || searchLoading}
-        scroll={{ x: 700 }}
+        scroll={{ x: 860 }}
         pagination={{ pageSize: 20 }}
         locale={{ emptyText: 'No books found' }}
       />
