@@ -25,11 +25,9 @@ type ReservationViewApiItem = {
   status?: ReservationStatus | string
   reserved_at?: string
   due_date?: string
-  // Nested structure from Swagger
-  user?: { full_name?: string }
+  user?: { full_name?: string; name?: string; surname?: string }
   book?: { title?: string }
   library?: { name?: string }
-  // Possible flat structure (older backend)
   user_name?: string
   book_title?: string
   library_name?: string
@@ -87,13 +85,19 @@ export default function AdminReservationsPage() {
       statusRaw === 'pending' || statusRaw === 'active' || statusRaw === 'completed' || statusRaw === 'cancelled'
         ? statusRaw
         : 'pending'
-
+  
+    const userName =
+      item.user?.full_name ??
+      (item.user?.name && item.user?.surname
+        ? `${item.user.name} ${item.user.surname}`
+        : item.user?.name ?? item.user_name ?? '')
+  
     return {
       id: String(item.id ?? ''),
       status,
       reserved_at: String(item.reserved_at ?? ''),
       due_date: String(item.due_date ?? ''),
-      user_name: String(item.user?.full_name ?? item.user_name ?? ''),
+      user_name: String(userName),
       book_title: String(item.book?.title ?? item.book_title ?? ''),
       library_name: String(item.library?.name ?? item.library_name ?? ''),
     }
