@@ -47,12 +47,12 @@ export default function SidebarLayout({
 
   useEffect(() => {
     api
-      .get<{ full_name?: string; name?: string; surname?: string; role?: string; avatar_url?: string }>('/users/me')
+      .get<{ name?: string; surname?: string; role?: string; avatar_url?: string }>('/users/me')
       .then(({ data }) => {
         const first = (data.name ?? '').trim()
         const last = (data.surname ?? '').trim()
         const composed = [first, last].filter(Boolean).join(' ')
-        setFullName((data.full_name ?? '').trim() || composed || 'User')
+        setFullName(composed || 'User')
         setRole(data.role || '')
       })
       .catch(() => setFullName('User'))

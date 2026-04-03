@@ -25,7 +25,7 @@ type ReservationViewApiItem = {
   reserved_at?: string
   due_date?: string
   // Nested structure from Swagger
-  user?: { full_name?: string }
+  user?: { name?: string; surname?: string }
   book?: { title?: string }
   library?: { name?: string }
   // Possible flat structure (older backend)
@@ -88,12 +88,17 @@ export default function StaffReservationsPage() {
         ? statusRaw
         : 'pending'
 
+    const fullName = [item.user?.name, item.user?.surname]
+      .map((part) => String(part ?? '').trim())
+      .filter(Boolean)
+      .join(' ')
+
     return {
       id: String(item.id ?? ''),
       status,
       reserved_at: String(item.reserved_at ?? ''),
       due_date: String(item.due_date ?? ''),
-      user_name: String(item.user?.full_name ?? item.user_name ?? ''),
+      user_name: fullName || String(item.user_name ?? ''),
       book_title: String(item.book?.title ?? item.book_title ?? ''),
     }
   }
