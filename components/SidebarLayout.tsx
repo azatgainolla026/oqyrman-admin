@@ -2,17 +2,10 @@
 
 import { useState, useEffect, type ReactNode } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { Layout, Menu, Button, Typography, Avatar, Tooltip, Drawer } from 'antd'
-import {
-  LogoutOutlined,
-  UserOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  MenuOutlined,
-} from '@ant-design/icons'
+import { Layout, Menu, Button, Typography, Drawer } from 'antd'
+import { MenuOutlined } from '@ant-design/icons'
 import type { ItemType } from 'antd/es/menu/interface'
-import { removeToken, getRefreshToken } from '@/lib/auth'
-import api from '@/lib/api'
+import ProfileDropdown from '@/components/ProfileDropdown'
 
 const { Header, Sider, Content } = Layout
 const { Text } = Typography
@@ -35,8 +28,6 @@ export default function SidebarLayout({
   const [collapsed, setCollapsed] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
-  const [fullName, setFullName] = useState('')
-  const [role, setRole] = useState('')
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
@@ -45,57 +36,29 @@ export default function SidebarLayout({
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  useEffect(() => {
-    api
-      .get<{ name?: string; surname?: string; role?: string; avatar_url?: string }>('/users/me')
-      .then(({ data }) => {
-        const first = (data.name ?? '').trim()
-        const last = (data.surname ?? '').trim()
-        const composed = [first, last].filter(Boolean).join(' ')
-        setFullName(composed || 'User')
-        setRole(data.role || '')
-      })
-      .catch(() => setFullName('User'))
-  }, [])
-
-  const handleLogout = async () => {
-    try {
-      const refreshToken = getRefreshToken()
-      if (refreshToken) {
-        await api.post('/auth/logout', { refresh_token: refreshToken })
-      }
-    } catch {
-      // ignore
-    }
-    removeToken()
-    window.location.href = '/login'
-  }
-
   const handleMenuClick = (key: string) => {
     router.push(key)
     if (isMobile) setMobileOpen(false)
   }
 
   const sidebarContent = (
-    <div className="flex flex-col h-full">
-      {/* Logo + Toggle */}
+    <div className="flex flex-col h-full py-4">
+      {/* Logo area */}
       <div
-        className="flex items-center justify-between px-4 border-b border-white/10 shrink-0"
-        style={{ height: 64, minHeight: 64 }}
+        className={`flex items-center gap-3 px-5 mb-6 shrink-0 ${!isMobile ? 'cursor-pointer' : ''}`}
+        onClick={() => { if (!isMobile) setCollapsed(!collapsed) }}
       >
+        <img
+          src="https://api.oqyrman.app/minio/oqyrman/static/logo_circle.svg"
+          alt="Oqyrman"
+          width={34}
+          height={34}
+          className="shrink-0"
+        />
         {(!collapsed || isMobile) && (
-          <Text strong className="!text-white text-lg tracking-wide whitespace-nowrap">
+          <Text strong className="!text-white text-[15px] tracking-wide whitespace-nowrap">
             {title}
           </Text>
-        )}
-        {!isMobile && (
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-            className="!text-gray-400 hover:!text-white"
-            size="small"
-          />
         )}
       </div>
 
@@ -110,41 +73,10 @@ export default function SidebarLayout({
           background: 'transparent',
           borderRight: 'none',
           flex: 1,
-          marginTop: 8,
-          padding: '0 8px',
+          padding: '0 12px',
           overflow: 'auto',
         }}
       />
-
-      {/* User profile at bottom */}
-      {(!collapsed || isMobile) && (
-        <div
-          className="border-t border-white/10 flex items-center gap-3 cursor-default shrink-0"
-          style={{ padding: '12px 16px' }}
-        >
-          <Avatar
-            icon={<UserOutlined />}
-            style={{ backgroundColor: '#6366f1', flexShrink: 0 }}
-          />
-          <div className="flex flex-col overflow-hidden min-w-0 flex-1">
-            <Text className="!text-white text-sm font-medium truncate">
-              {fullName}
-            </Text>
-            <Text className="!text-gray-400 text-xs truncate">
-              {role}
-            </Text>
-          </div>
-          <Tooltip title="Logout" placement="top">
-            <Button
-              type="text"
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-              className="!text-gray-500 hover:!text-red-400"
-              size="small"
-            />
-          </Tooltip>
-        </div>
-      )}
     </div>
   )
 
@@ -159,7 +91,7 @@ export default function SidebarLayout({
           width={250}
           collapsedWidth={70}
           style={{
-            background: 'linear-gradient(180deg, #1a1d2e 0%, #13152b 100%)',
+            background: '#0f2820',
             height: '100vh',
             position: 'sticky',
             top: 0,
@@ -179,7 +111,7 @@ export default function SidebarLayout({
           onClose={() => setMobileOpen(false)}
           size="default"
           styles={{
-            body: { padding: 0, background: 'linear-gradient(180deg, #1a1d2e 0%, #13152b 100%)' },
+            body: { padding: 0, background: '#0f2820' },
             header: { display: 'none' },
           }}
         >
@@ -190,18 +122,19 @@ export default function SidebarLayout({
       <Layout style={{ minWidth: 0 }}>
         <Header
           className="!bg-white flex items-center justify-between shadow-sm !h-16"
-          style={{ padding: '0 16px', position: 'sticky', top: 0, zIndex: 9 }}
+          style={{ padding: '0 20px', position: 'sticky', top: 0, zIndex: 9 }}
         >
-          {isMobile && (
-            <Button
-              type="text"
-              icon={<MenuOutlined />}
-              onClick={() => setMobileOpen(true)}
-              className="!text-gray-600"
-            />
-          )}
-          <div className="flex-1" />
-          <Text className="text-gray-700 text-sm">{fullName}</Text>
+          <div className="flex items-center gap-3">
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                onClick={() => setMobileOpen(true)}
+                className="!text-gray-600"
+              />
+            )}
+          </div>
+          <ProfileDropdown />
         </Header>
 
         <Content

@@ -59,7 +59,14 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-sm shadow-md">
-        <div className="mb-6 text-center">
+        <div className="mb-6 text-center flex flex-col items-center">
+          <img
+            src="https://api.oqyrman.app/minio/oqyrman/static/logo_circle.svg"
+            alt="Oqyrman"
+            width={64}
+            height={64}
+            className="mb-3"
+          />
           <Title level={3} className="!mb-1">
             Oqyrman Admin
           </Title>

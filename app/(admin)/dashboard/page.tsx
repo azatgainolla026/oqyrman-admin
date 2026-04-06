@@ -28,12 +28,12 @@ import type { AdminStats } from '@/lib/types'
 
 const { Title } = Typography
 
-const PIE_COLORS = ['#10b981', '#f59e0b', '#6366f1']
+const PIE_COLORS = ['#1E5945', '#f59e0b', '#4fd1a5']
 const BAR_COLORS: Record<string, string> = {
-  Users: '#3b82f6',
-  Books: '#8b5cf6',
+  Users: '#1E5945',
+  Books: '#2a7a5e',
   Authors: '#14b8a6',
-  Reviews: '#eab308',
+  Reviews: '#f59e0b',
 }
 
 export default function DashboardPage() {

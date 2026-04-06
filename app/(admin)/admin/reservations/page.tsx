@@ -38,7 +38,7 @@ type ReservationViewApiItem = {
 const STATUS_COLOR: Record<ReservationStatus, string> = {
   pending: 'orange',
   active: 'green',
-  completed: 'blue',
+  completed: 'cyan',
   cancelled: 'default',
 }
 

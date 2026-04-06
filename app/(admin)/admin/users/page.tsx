@@ -185,7 +185,7 @@ export default function UsersPage() {
 
   const ROLE_COLOR: Record<string, string> = {
     Admin: 'red',
-    Staff: 'blue',
+    Staff: 'green',
     User: 'default',
   }
 

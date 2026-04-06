@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import AntdProvider from "@/components/AntdProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Oqyrman Admin",
   description: "Oqyrman Library Platform Admin Panel",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({
@@ -29,7 +33,9 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen bg-[#f5f5f5]">{children}</body>
+      <body className="min-h-screen bg-[#f5f5f5]">
+        <AntdProvider>{children}</AntdProvider>
+      </body>
     </html>
   );
 }

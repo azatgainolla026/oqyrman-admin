@@ -9,6 +9,7 @@ import {
   ScheduleOutlined,
 } from '@ant-design/icons'
 import SidebarLayout from '@/components/SidebarLayout'
+import AuthGuard from '@/components/AuthGuard'
 
 const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
@@ -21,12 +22,14 @@ const menuItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarLayout
-      menuItems={menuItems}
-      title="Oqyrman Admin"
-      collapsedIcon={<BookOutlined className="text-white text-xl" />}
-    >
-      {children}
-    </SidebarLayout>
+    <AuthGuard allow="admin">
+      <SidebarLayout
+        menuItems={menuItems}
+        title="Oqyrman Admin"
+        collapsedIcon={<BookOutlined className="text-white text-xl" />}
+      >
+        {children}
+      </SidebarLayout>
+    </AuthGuard>
   )
 }

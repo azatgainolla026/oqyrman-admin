@@ -41,14 +41,14 @@ const { Title, Text } = Typography
 
 const RESERVATION_COLORS = {
   Pending: '#f97316',
-  Active: '#22c55e',
-  Completed: '#3b82f6',
+  Active: '#1E5945',
+  Completed: '#14b8a6',
   Cancelled: '#ef4444',
 }
 
 const BOOK_COLORS = {
-  total: '#a855f7',
-  available: '#06b6d4',
+  total: '#1E5945',
+  available: '#4fd1a5',
 }
 
 export default function StaffDashboardPage() {
@@ -80,12 +80,12 @@ export default function StaffDashboardPage() {
     {
       title: 'Active',
       value: stats?.active_reservations,
-      icon: <CheckCircleOutlined className="text-green-500 text-2xl" />,
+      icon: <CheckCircleOutlined className="text-emerald-700 text-2xl" />,
     },
     {
       title: 'Completed',
       value: stats?.completed_reservations,
-      icon: <CalendarOutlined className="text-blue-500 text-2xl" />,
+      icon: <CalendarOutlined className="text-teal-500 text-2xl" />,
     },
     {
       title: 'Cancelled',
@@ -141,8 +141,8 @@ export default function StaffDashboardPage() {
               rel="noopener noreferrer"
             >
               <Space size="small" className="hover:opacity-70 transition-opacity">
-                <EnvironmentOutlined className="text-blue-500" />
-                <Text className="text-blue-500 underline">{library?.address}</Text>
+                <EnvironmentOutlined className="text-emerald-700" />
+                <Text className="text-emerald-700 underline">{library?.address}</Text>
               </Space>
             </a>
             <Space size="small">

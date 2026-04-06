@@ -22,31 +22,39 @@ body {
 }
 
 /* Sidebar menu styling */
-.ant-layout-sider .ant-menu-dark {
+.ant-layout-sider .ant-menu-dark,
+.ant-drawer .ant-menu-dark {
   background: transparent !important;
 }
 
-.ant-layout-sider .ant-menu-dark .ant-menu-item {
-  border-radius: 8px;
-  margin: 2px 0;
+.ant-layout-sider .ant-menu-dark .ant-menu-item,
+.ant-drawer .ant-menu-dark .ant-menu-item {
+  border-radius: 10px;
+  margin: 3px 0;
   height: 42px;
   line-height: 42px;
-  color: rgba(255, 255, 255, 0.65);
-  transition: all 0.2s;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s ease;
 }
 
-.ant-layout-sider .ant-menu-dark .ant-menu-item:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #fff;
+.ant-layout-sider .ant-menu-dark .ant-menu-item:hover,
+.ant-drawer .ant-menu-dark .ant-menu-item:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.ant-layout-sider .ant-menu-dark .ant-menu-item-selected {
-  background: rgba(99, 102, 241, 0.2) !important;
-  color: #818cf8 !important;
+.ant-layout-sider .ant-menu-dark .ant-menu-item-selected,
+.ant-drawer .ant-menu-dark .ant-menu-item-selected {
+  background: rgba(79, 209, 165, 0.15) !important;
+  color: #5ee6b5 !important;
+  font-weight: 600;
 }
 
-.ant-layout-sider .ant-menu-dark .ant-menu-item-selected .anticon {
-  color: #818cf8 !important;
+.ant-layout-sider .ant-menu-dark .ant-menu-item-selected .anticon,
+.ant-drawer .ant-menu-dark .ant-menu-item-selected .anticon {
+  color: #5ee6b5 !important;
 }
 
 /* Responsive table */
