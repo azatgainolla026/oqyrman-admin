@@ -30,10 +30,10 @@ const { Title } = Typography
 
 const PIE_COLORS = ['#1E5945', '#f59e0b', '#4fd1a5']
 const BAR_COLORS: Record<string, string> = {
-  Users: '#1E5945',
-  Books: '#2a7a5e',
-  Authors: '#14b8a6',
-  Reviews: '#f59e0b',
+  Пользователи: '#1E5945',
+  Книги: '#2a7a5e',
+  Авторы: '#14b8a6',
+  Отзывы: '#f59e0b',
 }
 
 export default function DashboardPage() {
@@ -49,37 +49,37 @@ export default function DashboardPage() {
 
   const cards = [
     {
-      title: 'Total Users',
+      title: 'Пользователей',
       value: stats?.users_total,
       icon: <UserOutlined className="text-blue-500 text-2xl" />,
     },
     {
-      title: 'Total Books',
+      title: 'Книг',
       value: stats?.books_total,
       icon: <BookOutlined className="text-purple-500 text-2xl" />,
     },
     {
-      title: 'Total Authors',
+      title: 'Авторов',
       value: stats?.authors_total,
       icon: <EditOutlined className="text-teal-500 text-2xl" />,
     },
     {
-      title: 'Total Reservations',
+      title: 'Броней всего',
       value: stats?.reservations_total,
       icon: <CalendarOutlined className="text-orange-500 text-2xl" />,
     },
     {
-      title: 'Active Reservations',
+      title: 'Активных броней',
       value: stats?.reservations_active,
       icon: <CheckCircleOutlined className="text-emerald-500 text-2xl" />,
     },
     {
-      title: 'Pending Reservations',
+      title: 'Ожидающих броней',
       value: stats?.reservations_pending,
       icon: <ClockCircleOutlined className="text-amber-500 text-2xl" />,
     },
     {
-      title: 'Total Reviews',
+      title: 'Отзывов',
       value: stats?.reviews_total,
       icon: <StarOutlined className="text-yellow-500 text-2xl" />,
     },
@@ -91,23 +91,23 @@ export default function DashboardPage() {
     (stats?.reservations_pending ?? 0)
 
   const pieData = [
-    { name: 'Active', value: stats?.reservations_active ?? 0 },
-    { name: 'Pending', value: stats?.reservations_pending ?? 0 },
-    { name: 'Completed', value: completedReservations },
+    { name: 'Активные', value: stats?.reservations_active ?? 0 },
+    { name: 'Ожидают', value: stats?.reservations_pending ?? 0 },
+    { name: 'Завершённые', value: completedReservations },
   ]
   const pieDataNonZero = pieData.filter((item) => item.value > 0)
 
   const barData = [
-    { name: 'Users', value: stats?.users_total ?? 0 },
-    { name: 'Books', value: stats?.books_total ?? 0 },
-    { name: 'Authors', value: stats?.authors_total ?? 0 },
-    { name: 'Reviews', value: stats?.reviews_total ?? 0 },
+    { name: 'Пользователи', value: stats?.users_total ?? 0 },
+    { name: 'Книги', value: stats?.books_total ?? 0 },
+    { name: 'Авторы', value: stats?.authors_total ?? 0 },
+    { name: 'Отзывы', value: stats?.reviews_total ?? 0 },
   ]
 
   return (
     <div>
       <Title level={4} className="!mb-6">
-        Dashboard
+        Главная
       </Title>
 
       <Row gutter={[16, 16]}>
@@ -131,7 +131,7 @@ export default function DashboardPage() {
       {!loading && stats && (
         <Row gutter={[16, 16]} className="mt-4">
           <Col xs={24} lg={12}>
-            <Card title="Reservation Breakdown">
+            <Card title="Распределение броней">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -162,14 +162,14 @@ export default function DashboardPage() {
           </Col>
 
           <Col xs={24} lg={12}>
-            <Card title="Overview Totals">
+            <Card title="Общая статистика">
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={barData}>
                   <XAxis dataKey="name" />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="value" name="Count" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="value" name="Количество" radius={[4, 4, 0, 0]}>
                     {barData.map((entry) => (
                       <Cell
                         key={entry.name}

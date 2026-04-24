@@ -68,8 +68,8 @@ export default function ProfileDropdown() {
     : ''
 
   const fullName = profile
-    ? [profile.name, profile.surname].filter(Boolean).join(' ') || 'User'
-    : 'User'
+    ? [profile.name, profile.surname].filter(Boolean).join(' ') || 'Пользователь'
+    : 'Пользователь'
 
   const handleLogout = async () => {
     try {

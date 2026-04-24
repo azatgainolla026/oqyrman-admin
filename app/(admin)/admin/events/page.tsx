@@ -75,7 +75,7 @@ export default function EventsPage() {
       setEvents(filtered)
       setTotal(extractTotal(data) ?? filtered.length)
     } catch {
-      message.error('Failed to load events')
+      message.error('Не удалось загрузить события')
     } finally {
       setLoading(false)
     }
@@ -125,10 +125,10 @@ export default function EventsPage() {
           ends_at: values.dates[1].toISOString(),
         }
         await api.put(`/admin/events/${editing.id}`, payload)
-        message.success('Event updated')
+        message.success('Событие обновлено')
       } else {
         if (!createCoverFile) {
-          message.error('Please upload a cover image')
+          message.error('Загрузите обложку события')
           setSubmitting(false)
           return
         }
@@ -142,12 +142,12 @@ export default function EventsPage() {
         formData.append('cover', createCoverFile)
 
         await api.post('/admin/events', formData)
-        message.success('Event created')
+        message.success('Событие создано')
       }
       setModalOpen(false)
       fetchEvents(page)
     } catch {
-      message.error('Failed to save event')
+      message.error('Не удалось сохранить событие')
     } finally {
       setSubmitting(false)
     }
@@ -156,16 +156,16 @@ export default function EventsPage() {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/events/${id}`)
-      message.success('Event deleted')
+      message.success('Событие удалено')
       fetchEvents(page)
     } catch {
-      message.error('Failed to delete event')
+      message.error('Не удалось удалить событие')
     }
   }
 
   const columns: ColumnsType<Event> = [
     {
-      title: 'Cover',
+      title: 'Обложка',
       key: 'cover',
       width: 80,
       align: 'center',
@@ -189,29 +189,29 @@ export default function EventsPage() {
           </div>
         ),
     },
-    { title: 'Title', dataIndex: 'title', key: 'title' },
-    { title: 'Location', dataIndex: 'location', key: 'location' },
-    { title: 'Description', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: 'Название', dataIndex: 'title', key: 'title' },
+    { title: 'Место', dataIndex: 'location', key: 'location' },
+    { title: 'Описание', dataIndex: 'description', key: 'description', ellipsis: true },
     {
-      title: 'Start',
+      title: 'Начало',
       dataIndex: 'starts_at',
       key: 'starts_at',
       render: (val: string) => new Date(val).toLocaleDateString(),
     },
     {
-      title: 'End',
+      title: 'Конец',
       dataIndex: 'ends_at',
       key: 'ends_at',
       render: (val: string) => new Date(val).toLocaleDateString(),
     },
     {
-      title: 'Actions',
+      title: 'Действия',
       key: 'actions',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           <Popconfirm
-            title="Delete this event?"
+            title="Удалить это событие?"
             onConfirm={() => handleDelete(record.id)}
           >
             <Button danger size="small" icon={<DeleteOutlined />} />
@@ -225,17 +225,17 @@ export default function EventsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <Title level={4} className="!mb-0">
-          Events
+          События
         </Title>
         <div className="flex flex-1 items-center justify-end gap-3">
           <Input.Search
-            placeholder="Search by title or location"
+            placeholder="Поиск по названию или месту"
             allowClear
             onSearch={handleSearch}
             style={{ maxWidth: 320 }}
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            Add Event
+            Добавить событие
           </Button>
         </div>
       </div>
@@ -256,27 +256,27 @@ export default function EventsPage() {
       />
 
       <Modal
-        title={editing ? 'Edit Event' : 'Add Event'}
+        title={editing ? 'Редактировать событие' : 'Добавить событие'}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         confirmLoading={submitting}
       >
         <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
+          <Form.Item name="title" label="Название" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="description" label="Description" rules={[{ required: true }]}>
+          <Form.Item name="description" label="Описание" rules={[{ required: true }]}>
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item name="location" label="Location" rules={[{ required: true }]}>
+          <Form.Item name="location" label="Место проведения" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           {!editing && (
             <Form.Item
-              label="Cover Image"
+              label="Обложка"
               required
-              help={createCoverFile ? undefined : 'Required'}
+              help={createCoverFile ? undefined : 'Обязательно'}
               validateStatus={createCoverFile ? 'success' : undefined}
             >
               <Upload
@@ -289,11 +289,11 @@ export default function EventsPage() {
                 accept="image/*"
                 listType="picture"
               >
-                <Button icon={<UploadOutlined />}>Select Cover</Button>
+                <Button icon={<UploadOutlined />}>Выбрать обложку</Button>
               </Upload>
             </Form.Item>
           )}
-          <Form.Item name="dates" label="Date Range" rules={[{ required: true }]}>
+          <Form.Item name="dates" label="Период" rules={[{ required: true }]}>
             <RangePicker className="!w-full" showTime />
           </Form.Item>
         </Form>

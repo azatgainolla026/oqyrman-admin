@@ -53,7 +53,7 @@ export default function LibrariesPage() {
       setLibraries(filtered)
       setTotal(filtered.length)
     } catch {
-      message.error('Failed to load libraries')
+      message.error('Не удалось загрузить библиотеки')
     } finally {
       setLoading(false)
     }
@@ -88,15 +88,15 @@ export default function LibrariesPage() {
     try {
       if (editing) {
         await api.put(`/admin/libraries/${editing.id}`, values)
-        message.success('Library updated')
+        message.success('Библиотека обновлена')
       } else {
         await api.post('/admin/libraries', values)
-        message.success('Library created')
+        message.success('Библиотека создана')
       }
       setModalOpen(false)
       fetchLibraries(page)
     } catch {
-      message.error('Failed to save library')
+      message.error('Не удалось сохранить библиотеку')
     } finally {
       setSubmitting(false)
     }
@@ -105,26 +105,26 @@ export default function LibrariesPage() {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/libraries/${id}`)
-      message.success('Library deleted')
+      message.success('Библиотека удалена')
       fetchLibraries(page)
     } catch {
-      message.error('Failed to delete library')
+      message.error('Не удалось удалить библиотеку')
     }
   }
 
   const columns: ColumnsType<Library> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
-    { title: 'Name', dataIndex: 'name', key: 'name' },
-    { title: 'Address', dataIndex: 'address', key: 'address' },
-    { title: 'Phone', dataIndex: 'phone', key: 'phone' },
+    { title: 'Название', dataIndex: 'name', key: 'name' },
+    { title: 'Адрес', dataIndex: 'address', key: 'address' },
+    { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
     {
-      title: 'Actions',
+      title: 'Действия',
       key: 'actions',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           <Popconfirm
-            title="Delete this library?"
+            title="Удалить эту библиотеку?"
             onConfirm={() => handleDelete(record.id)}
           >
             <Button danger size="small" icon={<DeleteOutlined />} />
@@ -138,17 +138,17 @@ export default function LibrariesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <Title level={4} className="!mb-0">
-          Libraries
+          Библиотеки
         </Title>
         <Space>
           <Search
-            placeholder="Search by name or address"
+            placeholder="Поиск по названию или адресу"
             allowClear
             onSearch={handleSearch}
             style={{ width: 250 }}
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            Add Library
+            Добавить библиотеку
           </Button>
         </Space>
       </div>
@@ -169,26 +169,26 @@ export default function LibrariesPage() {
       />
 
       <Modal
-        title={editing ? 'Edit Library' : 'Add Library'}
+        title={editing ? 'Редактировать библиотеку' : 'Добавить библиотеку'}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         confirmLoading={submitting}
       >
         <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+          <Form.Item name="name" label="Название" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="address" label="Address" rules={[{ required: true }]}>
+          <Form.Item name="address" label="Адрес" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="phone" label="Phone">
+          <Form.Item name="phone" label="Телефон">
             <Input />
           </Form.Item>
-          <Form.Item name="lat" label="Latitude" rules={[{ required: true }]}>
+          <Form.Item name="lat" label="Широта" rules={[{ required: true }]}>
             <InputNumber className="!w-full" />
           </Form.Item>
-          <Form.Item name="lng" label="Longitude" rules={[{ required: true }]}>
+          <Form.Item name="lng" label="Долгота" rules={[{ required: true }]}>
             <InputNumber className="!w-full" />
           </Form.Item>
         </Form>

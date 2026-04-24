@@ -9,9 +9,9 @@ import SidebarLayout from '@/components/SidebarLayout'
 import AuthGuard from '@/components/AuthGuard'
 
 const menuItems = [
-  { key: '/staff/dashboard', icon: <BankOutlined />, label: 'My Library' },
-  { key: '/staff/books', icon: <BookOutlined />, label: 'Books' },
-  { key: '/staff/reservations', icon: <CalendarOutlined />, label: 'Reservations' },
+  { key: '/staff/dashboard', icon: <BankOutlined />, label: 'Моя библиотека' },
+  { key: '/staff/books', icon: <BookOutlined />, label: 'Книги' },
+  { key: '/staff/reservations', icon: <CalendarOutlined />, label: 'Брони' },
 ]
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {

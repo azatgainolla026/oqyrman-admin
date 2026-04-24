@@ -42,12 +42,19 @@ const STATUS_COLOR: Record<ReservationStatus, string> = {
   cancelled: 'default',
 }
 
+const STATUS_LABEL: Record<ReservationStatus, string> = {
+  pending: 'Ожидает',
+  active: 'Активна',
+  completed: 'Завершена',
+  cancelled: 'Отменена',
+}
+
 const TAB_ITEMS = [
-  { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'active', label: 'Active' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'all', label: 'Все' },
+  { key: 'pending', label: 'Ожидают' },
+  { key: 'active', label: 'Активные' },
+  { key: 'completed', label: 'Завершённые' },
+  { key: 'cancelled', label: 'Отменённые' },
 ]
 
 export default function AdminReservationsPage() {
@@ -123,7 +130,7 @@ export default function AdminReservationsPage() {
         setReservations(filtered)
         setTotal(extractTotal(data) ?? filtered.length)
       } catch {
-        message.error('Failed to load reservations')
+        message.error('Не удалось загрузить брони')
       } finally {
         setLoading(false)
       }
@@ -155,7 +162,7 @@ export default function AdminReservationsPage() {
       message.success(successMsg)
       fetchReservations(activeTab, page, searchQuery)
     } catch {
-      message.error('Action failed')
+      message.error('Действие не выполнено')
     } finally {
       setActionId(null)
     }
@@ -165,43 +172,43 @@ export default function AdminReservationsPage() {
     handleAction(
       id,
       () => api.patch(`/admin/reservations/${id}/status`, { status }),
-      'Status updated'
+      'Статус обновлён'
     )
 
   const returnBook = (id: string) =>
     handleAction(
       id,
       () => api.patch(`/admin/reservations/${id}/return`),
-      'Book returned'
+      'Книга возвращена'
     )
 
   const columns: ColumnsType<AdminReservation> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
-    { title: 'User', dataIndex: 'user_name', key: 'user_name' },
-    { title: 'Book', dataIndex: 'book_title', key: 'book_title' },
-    { title: 'Library', dataIndex: 'library_name', key: 'library_name' },
+    { title: 'Пользователь', dataIndex: 'user_name', key: 'user_name' },
+    { title: 'Книга', dataIndex: 'book_title', key: 'book_title' },
+    { title: 'Библиотека', dataIndex: 'library_name', key: 'library_name' },
     {
-      title: 'Status',
+      title: 'Статус',
       dataIndex: 'status',
       key: 'status',
       render: (status: ReservationStatus) => (
-        <Tag color={STATUS_COLOR[status]}>{status.toUpperCase()}</Tag>
+        <Tag color={STATUS_COLOR[status]}>{STATUS_LABEL[status]}</Tag>
       ),
     },
     {
-      title: 'Reserved',
+      title: 'Забронирована',
       dataIndex: 'reserved_at',
       key: 'reserved_at',
-      render: (val: string) => new Date(val).toLocaleDateString(),
+      render: (val: string) => new Date(val).toLocaleDateString('ru'),
     },
     {
-      title: 'Due Date',
+      title: 'Срок',
       dataIndex: 'due_date',
       key: 'due_date',
-      render: (val: string) => new Date(val).toLocaleDateString(),
+      render: (val: string) => new Date(val).toLocaleDateString('ru'),
     },
     {
-      title: 'Actions',
+      title: 'Действия',
       key: 'actions',
       render: (_, record) => (
         <Space size="small">
@@ -212,7 +219,7 @@ export default function AdminReservationsPage() {
               loading={actionId === record.id}
               onClick={() => changeStatus(record.id, 'active')}
             >
-              Confirm
+              Подтвердить
             </Button>
           )}
           {record.status === 'active' && (
@@ -221,7 +228,7 @@ export default function AdminReservationsPage() {
               loading={actionId === record.id}
               onClick={() => returnBook(record.id)}
             >
-              Return
+              Возврат
             </Button>
           )}
           {(record.status === 'pending' || record.status === 'active') && (
@@ -231,7 +238,7 @@ export default function AdminReservationsPage() {
               loading={actionId === record.id}
               onClick={() => changeStatus(record.id, 'cancelled')}
             >
-              Cancel
+              Отменить
             </Button>
           )}
         </Space>
@@ -242,7 +249,7 @@ export default function AdminReservationsPage() {
   return (
     <div>
       <Title level={4} className="!mb-6">
-        Reservations
+        Брони
       </Title>
 
       <Tabs
@@ -253,7 +260,7 @@ export default function AdminReservationsPage() {
       />
 
       <Search
-        placeholder="Search by user name"
+        placeholder="Поиск по имени пользователя"
         allowClear
         onSearch={handleSearch}
         className="!mb-4"

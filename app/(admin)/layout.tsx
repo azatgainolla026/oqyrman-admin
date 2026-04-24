@@ -12,12 +12,12 @@ import SidebarLayout from '@/components/SidebarLayout'
 import AuthGuard from '@/components/AuthGuard'
 
 const menuItems = [
-  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Dashboard' },
-  { key: '/admin/users', icon: <UserOutlined />, label: 'Users' },
-  { key: '/admin/libraries', icon: <BankOutlined />, label: 'Libraries' },
-  { key: '/admin/books', icon: <BookOutlined />, label: 'Books' },
-  { key: '/admin/reservations', icon: <CalendarOutlined />, label: 'Reservations' },
-  { key: '/admin/events', icon: <ScheduleOutlined />, label: 'Events' },
+  { key: '/dashboard', icon: <DashboardOutlined />, label: 'Главная' },
+  { key: '/admin/users', icon: <UserOutlined />, label: 'Пользователи' },
+  { key: '/admin/libraries', icon: <BankOutlined />, label: 'Библиотеки' },
+  { key: '/admin/books', icon: <BookOutlined />, label: 'Книги' },
+  { key: '/admin/reservations', icon: <CalendarOutlined />, label: 'Брони' },
+  { key: '/admin/events', icon: <ScheduleOutlined />, label: 'События' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

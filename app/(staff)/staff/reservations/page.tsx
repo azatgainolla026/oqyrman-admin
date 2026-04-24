@@ -1,9 +1,13 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Table, Tabs, Tag, Button, Space, Typography, Input, message } from 'antd'
+import dynamic from 'next/dynamic'
+import { Table, Tabs, Tag, Button, Space, Typography, Input, Modal, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { QrcodeOutlined } from '@ant-design/icons'
 import api from '@/lib/api'
+
+const QRScanner = dynamic(() => import('@/components/QRScanner'), { ssr: false })
 
 const { Title } = Typography
 const { Search } = Input
@@ -41,12 +45,19 @@ const STATUS_COLOR: Record<ReservationStatus, string> = {
   cancelled: 'default',
 }
 
+const STATUS_LABEL: Record<ReservationStatus, string> = {
+  pending: 'Ожидает',
+  active: 'Активна',
+  completed: 'Завершена',
+  cancelled: 'Отменена',
+}
+
 const TAB_ITEMS = [
-  { key: 'all', label: 'All' },
-  { key: 'pending', label: 'Pending' },
-  { key: 'active', label: 'Active' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
+  { key: 'all', label: 'Все' },
+  { key: 'pending', label: 'Ожидают' },
+  { key: 'active', label: 'Активные' },
+  { key: 'completed', label: 'Завершённые' },
+  { key: 'cancelled', label: 'Отменённые' },
 ]
 
 export default function StaffReservationsPage() {
@@ -57,6 +68,8 @@ export default function StaffReservationsPage() {
   const [page, setPage] = useState(1)
   const [actionId, setActionId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [scanOpen, setScanOpen] = useState(false)
+  const [scanLoading, setScanLoading] = useState(false)
   const pageSize = 20
   const isInitialMount = useRef(true)
 
@@ -122,7 +135,7 @@ export default function StaffReservationsPage() {
         setReservations(filtered)
         setTotal(extractTotal(data) ?? filtered.length)
       } catch {
-        message.error('Failed to load reservations')
+        message.error('Не удалось загрузить брони')
       } finally {
         setLoading(false)
       }
@@ -163,59 +176,74 @@ export default function StaffReservationsPage() {
       message.success(successMsg)
       fetchReservations(activeTab, page, searchTerm)
     } catch {
-      message.error('Action failed')
+      message.error('Действие не выполнено')
     } finally {
       setActionId(null)
     }
   }
 
+  const handleScan = useCallback(async (token: string) => {
+    setScanLoading(true)
+    try {
+      await api.post('/staff/reservations/scan', { qr_token: token })
+      message.success('Книга выдана — бронь активирована')
+      setScanOpen(false)
+      fetchReservations(activeTab, page, searchTerm)
+    } catch {
+      message.error('QR-код не найден или бронь уже не в статусе pending')
+      setScanOpen(false)
+    } finally {
+      setScanLoading(false)
+    }
+  }, [activeTab, page, searchTerm, fetchReservations])
+
   const confirm = (id: string) =>
     handleAction(
       id,
       () => api.patch(`/staff/reservations/${id}/status`, { status: 'active' }),
-      'Reservation confirmed'
+      'Бронь подтверждена'
     )
 
   const returnBook = (id: string) =>
     handleAction(
       id,
       () => api.patch(`/staff/reservations/${id}/return`),
-      'Book returned'
+      'Книга возвращена'
     )
 
   const cancel = (id: string) =>
     handleAction(
       id,
       () => api.patch(`/staff/reservations/${id}/cancel`),
-      'Reservation cancelled'
+      'Бронь отменена'
     )
 
   const columns: ColumnsType<Reservation> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
-    { title: 'User', dataIndex: 'user_name', key: 'user_name' },
-    { title: 'Book', dataIndex: 'book_title', key: 'book_title' },
+    { title: 'Пользователь', dataIndex: 'user_name', key: 'user_name' },
+    { title: 'Книга', dataIndex: 'book_title', key: 'book_title' },
     {
-      title: 'Status',
+      title: 'Статус',
       dataIndex: 'status',
       key: 'status',
       render: (status: ReservationStatus) => (
-        <Tag color={STATUS_COLOR[status]}>{status.toUpperCase()}</Tag>
+        <Tag color={STATUS_COLOR[status]}>{STATUS_LABEL[status]}</Tag>
       ),
     },
     {
-      title: 'Reserved',
+      title: 'Забронирована',
       dataIndex: 'reserved_at',
       key: 'reserved_at',
-      render: (val: string) => new Date(val).toLocaleDateString(),
+      render: (val: string) => new Date(val).toLocaleDateString('ru'),
     },
     {
-      title: 'Due Date',
+      title: 'Срок',
       dataIndex: 'due_date',
       key: 'due_date',
-      render: (val: string) => new Date(val).toLocaleDateString(),
+      render: (val: string) => new Date(val).toLocaleDateString('ru'),
     },
     {
-      title: 'Actions',
+      title: 'Действия',
       key: 'actions',
       render: (_, record) => (
         <Space size="small">
@@ -226,7 +254,7 @@ export default function StaffReservationsPage() {
               loading={actionId === record.id}
               onClick={() => confirm(record.id)}
             >
-              Confirm
+              Подтвердить
             </Button>
           )}
           {record.status === 'active' && (
@@ -235,7 +263,7 @@ export default function StaffReservationsPage() {
               loading={actionId === record.id}
               onClick={() => returnBook(record.id)}
             >
-              Return
+              Возврат
             </Button>
           )}
           {(record.status === 'pending' || record.status === 'active') && (
@@ -245,7 +273,7 @@ export default function StaffReservationsPage() {
               loading={actionId === record.id}
               onClick={() => cancel(record.id)}
             >
-              Cancel
+              Отменить
             </Button>
           )}
         </Space>
@@ -255,9 +283,35 @@ export default function StaffReservationsPage() {
 
   return (
     <div>
-      <Title level={4} className="!mb-6">
-        Reservations
-      </Title>
+      <div className="flex items-center justify-between mb-6">
+        <Title level={4} className="!mb-0">
+          Брони
+        </Title>
+        <Button
+          type="primary"
+          icon={<QrcodeOutlined />}
+          onClick={() => setScanOpen(true)}
+        >
+          Сканировать QR
+        </Button>
+      </div>
+
+      <Modal
+        title="Сканировать QR-код брони"
+        open={scanOpen}
+        onCancel={() => setScanOpen(false)}
+        footer={null}
+        width={400}
+        destroyOnHidden
+      >
+        {scanLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <p>Обработка...</p>
+          </div>
+        ) : (
+          <QRScanner active={scanOpen && !scanLoading} onScan={handleScan} />
+        )}
+      </Modal>
 
       <Tabs
         activeKey={activeTab}
@@ -267,7 +321,7 @@ export default function StaffReservationsPage() {
       />
 
       <Search
-        placeholder="Search by user name"
+        placeholder="Поиск по имени пользователя"
         allowClear
         onSearch={handleSearch}
         className="!mb-4"

@@ -80,7 +80,7 @@ export default function BooksPage() {
 
       // Do NOT prefetch files per book here (would be N+1 requests).
     } catch {
-      message.error('Failed to load books')
+      message.error('Не удалось загрузить книги')
     } finally {
       setLoading(false)
     }
@@ -139,7 +139,7 @@ export default function BooksPage() {
     const values = await form.validateFields()
 
     if (!editing && !createCoverFile) {
-      message.error('Please upload a cover image')
+      message.error('Загрузите обложку книги')
       return
     }
 
@@ -147,7 +147,7 @@ export default function BooksPage() {
     try {
       if (editing) {
         await api.put(`/admin/books/${editing.id}`, values)
-        message.success('Book updated')
+        message.success('Книга обновлена')
       } else {
         const formData = new FormData()
         formData.append('title', values.title)
@@ -160,7 +160,7 @@ export default function BooksPage() {
         if (createCoverFile) formData.append('cover', createCoverFile)
 
         const { data: newBook } = await api.post<Book>('/admin/books', formData)
-        message.success('Book created')
+        message.success('Книга добавлена')
 
         // Upload book file if provided
         if (createBookFile) {
@@ -169,16 +169,16 @@ export default function BooksPage() {
           fileData.append('file', createBookFile)
           try {
             await api.post('/admin/book-files/upload', fileData)
-            message.success('Book file uploaded')
+            message.success('Файл книги загружен')
           } catch {
-            message.warning('Book created but file upload failed')
+            message.warning('Книга добавлена, но файл не загружен')
           }
         }
       }
       setModalOpen(false)
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Failed to save book')
+      message.error('Не удалось сохранить книгу')
     } finally {
       setSubmitting(false)
     }
@@ -187,10 +187,10 @@ export default function BooksPage() {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/books/${id}`)
-      message.success('Book deleted')
+      message.success('Книга удалена')
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Failed to delete book')
+      message.error('Не удалось удалить книгу')
     }
   }
 
@@ -199,10 +199,10 @@ export default function BooksPage() {
     formData.append('cover', file)
     try {
       await api.post(`/admin/books/${bookId}/cover`, formData)
-      message.success('Cover uploaded')
+      message.success('Обложка загружена')
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Failed to upload cover')
+      message.error('Не удалось загрузить обложку')
     }
   }
 
@@ -214,7 +214,7 @@ export default function BooksPage() {
 
   const handleFileUpload = async () => {
     if (!fileUploadFile) {
-      message.error('Please select a file')
+      message.error('Выберите файл')
       return
     }
     const formData = new FormData()
@@ -222,17 +222,17 @@ export default function BooksPage() {
     formData.append('file', fileUploadFile)
     try {
       await api.post('/admin/book-files/upload', formData)
-      message.success('File uploaded')
+      message.success('Файл загружен')
       setFileModalOpen(false)
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Failed to upload file')
+      message.error('Не удалось загрузить файл')
     }
   }
 
   const columns: ColumnsType<BookViewResponse> = [
     {
-      title: 'Cover',
+      title: 'Обложка',
       key: 'cover',
       width: 70,
       fixed: 'left',
@@ -257,27 +257,27 @@ export default function BooksPage() {
           </div>
         ),
     },
-    { title: 'Title', dataIndex: 'title', key: 'title', ellipsis: true, fixed: 'left', width: 200 },
+    { title: 'Название', dataIndex: 'title', key: 'title', ellipsis: true, fixed: 'left', width: 200 },
     {
-      title: 'Author',
+      title: 'Автор',
       key: 'author',
       width: 150,
       ellipsis: true,
       render: (_, record) => record.author?.name ?? '—',
     },
     {
-      title: 'Genre',
+      title: 'Жанр',
       key: 'genre',
       width: 120,
       ellipsis: true,
       render: (_, record) => record.genre?.name ?? '—',
     },
-    { title: 'Year', dataIndex: 'year', key: 'year', width: 70 },
-    { title: 'Pages', dataIndex: 'total_pages', key: 'total_pages', width: 80, align: 'center', render: (v: number) => v ?? '—' },
+    { title: 'Год', dataIndex: 'year', key: 'year', width: 70 },
+    { title: 'Страниц', dataIndex: 'total_pages', key: 'total_pages', width: 80, align: 'center', render: (v: number) => v ?? '—' },
     { title: 'ISBN', dataIndex: 'isbn', key: 'isbn', width: 160 },
-    { title: 'Language', dataIndex: 'language', key: 'language', width: 90, align: 'center' },
+    { title: 'Язык', dataIndex: 'language', key: 'language', width: 90, align: 'center' },
     {
-      title: 'Rating',
+      title: 'Рейтинг',
       dataIndex: 'avg_rating',
       key: 'avg_rating',
       width: 70,
@@ -285,7 +285,7 @@ export default function BooksPage() {
       render: (val: number) => val?.toFixed(1) ?? '—',
     },
     {
-      title: 'Actions',
+      title: 'Действия',
       key: 'actions',
       width: 180,
       fixed: 'right',
@@ -304,19 +304,19 @@ export default function BooksPage() {
             <Button
               size="small"
               icon={<PictureOutlined />}
-              title="Upload cover"
+              title="Загрузить обложку"
               className={record.cover_url ? '!text-green-500 !border-green-300' : ''}
             />
           </Upload>
           <Button
             size="small"
             icon={<FileTextOutlined />}
-            title="Upload book file"
+            title="Загрузить файл книги"
             onClick={() => openFileUpload(record.id)}
             className={record.file ? '!text-green-500 !border-green-300' : ''}
           />
           <Popconfirm
-            title="Delete this book?"
+            title="Удалить эту книгу?"
             onConfirm={() => handleDelete(record.id)}
           >
             <Button danger size="small" icon={<DeleteOutlined />} />
@@ -330,16 +330,16 @@ export default function BooksPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <Title level={4} className="!mb-0">
-          Books
+          Книги
         </Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Add Book
+          Добавить книгу
         </Button>
       </div>
 
       <div className="flex items-center gap-4 mb-4">
         <Input.Search
-          placeholder="Search by title or author"
+          placeholder="Поиск по названию или автору"
           allowClear
           enterButton={<SearchOutlined />}
           onSearch={handleSearch}
@@ -347,7 +347,7 @@ export default function BooksPage() {
         />
         <Select
           allowClear
-          placeholder="Filter by genre"
+          placeholder="Фильтр по жанру"
           style={{ minWidth: 180 }}
           options={genres.map((g) => ({ value: g.id, label: g.name }))}
           onChange={handleGenreFilter}
@@ -371,7 +371,7 @@ export default function BooksPage() {
       />
 
       <Modal
-        title={editing ? 'Edit Book' : 'Add Book'}
+        title={editing ? 'Редактировать книгу' : 'Добавить книгу'}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
@@ -379,23 +379,23 @@ export default function BooksPage() {
         width={600}
       >
         <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
+          <Form.Item name="title" label="Название" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="author_id" label="Author" rules={[{ required: true }]}>
+          <Form.Item name="author_id" label="Автор" rules={[{ required: true }]}>
             <Select
               showSearch
-              placeholder="Select author"
+              placeholder="Выберите автора"
               options={authors.map((a) => ({ value: a.id, label: a.name }))}
               filterOption={(input, option) =>
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
               }
             />
           </Form.Item>
-          <Form.Item name="genre_id" label="Genre" rules={[{ required: true }]}>
+          <Form.Item name="genre_id" label="Жанр" rules={[{ required: true }]}>
             <Select
               showSearch
-              placeholder="Select genre"
+              placeholder="Выберите жанр"
               options={genres.map((g) => ({ value: g.id, label: g.name }))}
               filterOption={(input, option) =>
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
@@ -405,30 +405,30 @@ export default function BooksPage() {
           <Form.Item name="isbn" label="ISBN" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="description" label="Description" rules={[{ required: true }]}>
+          <Form.Item name="description" label="Описание" rules={[{ required: true }]}>
             <Input.TextArea rows={3} />
           </Form.Item>
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item name="language" label="Language" rules={[{ required: true }]}>
+            <Form.Item name="language" label="Язык" rules={[{ required: true }]}>
               <Input placeholder="ru" />
             </Form.Item>
-            <Form.Item name="year" label="Year" rules={[{ required: true }]}>
+            <Form.Item name="year" label="Год" rules={[{ required: true }]}>
               <InputNumber className="!w-full" />
             </Form.Item>
           </div>
 
           {editing && (
-            <Form.Item name="total_pages" label="Total Pages">
-              <InputNumber min={1} className="!w-full" placeholder="e.g. 320" />
+            <Form.Item name="total_pages" label="Страниц">
+              <InputNumber min={1} className="!w-full" placeholder="например, 320" />
             </Form.Item>
           )}
 
           {!editing && (
             <>
               <Form.Item
-                label="Cover Image"
+                label="Обложка"
                 required
-                help={createCoverFile ? undefined : 'Required'}
+                help={createCoverFile ? undefined : 'Обязательно'}
                 validateStatus={createCoverFile ? 'success' : undefined}
               >
                 <Upload
@@ -441,13 +441,13 @@ export default function BooksPage() {
                   accept="image/*"
                   listType="picture"
                 >
-                  <Button icon={<UploadOutlined />}>Select Cover</Button>
+                  <Button icon={<UploadOutlined />}>Выбрать обложку</Button>
                 </Upload>
               </Form.Item>
 
               <div className="border-t pt-4 mt-2">
                 <Typography.Text type="secondary" className="block mb-3">
-                  Book File (optional)
+                  Файл книги (необязательно)
                 </Typography.Text>
                 <Upload
                   beforeUpload={(file) => {
@@ -458,7 +458,7 @@ export default function BooksPage() {
                   maxCount={1}
                   accept=".pdf,.epub,.mp3"
                 >
-                  <Button icon={<UploadOutlined />}>Select File</Button>
+                  <Button icon={<UploadOutlined />}>Выбрать файл</Button>
                 </Upload>
               </div>
             </>
@@ -467,7 +467,7 @@ export default function BooksPage() {
       </Modal>
 
       <Modal
-        title="Upload Book File"
+        title="Загрузить файл книги"
         open={fileModalOpen}
         onOk={handleFileUpload}
         onCancel={() => setFileModalOpen(false)}
@@ -482,7 +482,7 @@ export default function BooksPage() {
             maxCount={1}
             accept=".pdf,.epub,.mp3"
           >
-            <Button icon={<PlusOutlined />}>Select File</Button>
+            <Button icon={<PlusOutlined />}>Выбрать файл</Button>
           </Upload>
         </Form>
       </Modal>

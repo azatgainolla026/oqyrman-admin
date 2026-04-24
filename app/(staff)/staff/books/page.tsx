@@ -54,7 +54,7 @@ export default function StaffBooksPage() {
   const fetchAllBooks = useCallback(async () => {
     const libraryId = Cookies.get('library_id')
     if (!libraryId) {
-      message.error('Library ID not found')
+      message.error('ID библиотеки не найден')
       setLoading(false)
       return
     }
@@ -101,7 +101,7 @@ export default function StaffBooksPage() {
       setAllBooks(enriched)
       setFiltered(enriched)
     } catch {
-      message.error('Failed to load books')
+      message.error('Не удалось загрузить книги')
     } finally {
       setLoading(false)
     }
@@ -150,7 +150,7 @@ export default function StaffBooksPage() {
 
       setFiltered(applyGenreFilter(mapped, selectedGenre))
     } catch {
-      message.error('Failed to search books')
+      message.error('Не удалось выполнить поиск')
     } finally {
       setSearchLoading(false)
     }
@@ -171,7 +171,7 @@ export default function StaffBooksPage() {
 
   const columns: ColumnsType<EnrichedBook> = [
     {
-      title: 'Cover',
+      title: 'Обложка',
       key: 'cover',
       width: 70,
       align: 'center',
@@ -194,27 +194,27 @@ export default function StaffBooksPage() {
           </div>
         ),
     },
-    { title: 'Title', dataIndex: 'title', key: 'title' },
-    { title: 'Author', dataIndex: 'author', key: 'author' },
-    { title: 'Genre', dataIndex: 'genre', key: 'genre', width: 140, ellipsis: true, render: (v: string | undefined) => v ?? '—' },
-    { title: 'Year', dataIndex: 'year', key: 'year', width: 80 },
-    { title: 'Pages', dataIndex: 'total_pages', key: 'total_pages', width: 80, render: (v: number | undefined) => v ?? '—' },
+    { title: 'Название', dataIndex: 'title', key: 'title' },
+    { title: 'Автор', dataIndex: 'author', key: 'author' },
+    { title: 'Жанр', dataIndex: 'genre', key: 'genre', width: 140, ellipsis: true, render: (v: string | undefined) => v ?? '—' },
+    { title: 'Год', dataIndex: 'year', key: 'year', width: 80 },
+    { title: 'Страниц', dataIndex: 'total_pages', key: 'total_pages', width: 80, render: (v: number | undefined) => v ?? '—' },
     {
-      title: 'Copies',
+      title: 'Экз.',
       key: 'copies',
       width: 100,
       render: (_, record) =>
         `${record.available_copies} / ${record.total_copies}`,
     },
     {
-      title: 'Available',
+      title: 'Доступна',
       key: 'available',
       width: 100,
       render: (_, record) =>
         record.available_copies > 0 ? (
-          <Tag color="green">Yes</Tag>
+          <Tag color="green">Да</Tag>
         ) : (
-          <Tag color="red">No</Tag>
+          <Tag color="red">Нет</Tag>
         ),
     },
   ]
@@ -222,12 +222,12 @@ export default function StaffBooksPage() {
   return (
     <div>
       <Title level={4} className="!mb-6">
-        Books
+        Книги
       </Title>
 
       <div className="flex flex-wrap items-center gap-4 !mb-6">
         <Input.Search
-          placeholder="Search books by title, author..."
+          placeholder="Поиск по названию или автору..."
           prefix={<SearchOutlined />}
           size="large"
           allowClear
@@ -243,7 +243,7 @@ export default function StaffBooksPage() {
         />
 
         <Select
-          placeholder="Filter by genre"
+          placeholder="Фильтр по жанру"
           size="large"
           allowClear
           value={selectedGenre}
@@ -260,7 +260,7 @@ export default function StaffBooksPage() {
         loading={loading || searchLoading}
         scroll={{ x: 860 }}
         pagination={{ pageSize: 20 }}
-        locale={{ emptyText: 'No books found' }}
+        locale={{ emptyText: 'Книги не найдены' }}
       />
     </div>
   )

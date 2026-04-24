@@ -40,10 +40,10 @@ import Cookies from 'js-cookie'
 const { Title, Text } = Typography
 
 const RESERVATION_COLORS = {
-  Pending: '#f97316',
-  Active: '#1E5945',
-  Completed: '#14b8a6',
-  Cancelled: '#ef4444',
+  Ожидают: '#f97316',
+  Активные: '#1E5945',
+  Завершённые: '#14b8a6',
+  Отменённые: '#ef4444',
 }
 
 const BOOK_COLORS = {
@@ -67,38 +67,38 @@ export default function StaffDashboardPage() {
         setLibrary(libraryRes.data)
         setStats(statsRes.data)
       })
-      .catch(() => message.error('Failed to load data'))
+      .catch(() => message.error('Не удалось загрузить данные'))
       .finally(() => setLoadingPage(false))
   }, [])
 
   const statCards = [
     {
-      title: 'Pending',
+      title: 'Ожидают',
       value: stats?.pending_reservations,
       icon: <ClockCircleOutlined className="text-orange-500 text-2xl" />,
     },
     {
-      title: 'Active',
+      title: 'Активные',
       value: stats?.active_reservations,
       icon: <CheckCircleOutlined className="text-emerald-700 text-2xl" />,
     },
     {
-      title: 'Completed',
+      title: 'Завершённые',
       value: stats?.completed_reservations,
       icon: <CalendarOutlined className="text-teal-500 text-2xl" />,
     },
     {
-      title: 'Cancelled',
+      title: 'Отменённые',
       value: stats?.cancelled_reservations,
       icon: <StopOutlined className="text-red-400 text-2xl" />,
     },
     {
-      title: 'Total Books',
+      title: 'Книг всего',
       value: stats?.total_books,
       icon: <BookOutlined className="text-purple-500 text-2xl" />,
     },
     {
-      title: 'Available Books',
+      title: 'Книг доступно',
       value: stats?.available_books,
       icon: <InboxOutlined className="text-cyan-500 text-2xl" />,
     },
@@ -106,25 +106,25 @@ export default function StaffDashboardPage() {
 
   const pieData = stats
     ? [
-        { name: 'Pending', value: stats.pending_reservations },
-        { name: 'Active', value: stats.active_reservations },
-        { name: 'Completed', value: stats.completed_reservations },
-        { name: 'Cancelled', value: stats.cancelled_reservations },
+        { name: 'Ожидают', value: stats.pending_reservations },
+        { name: 'Активные', value: stats.active_reservations },
+        { name: 'Завершённые', value: stats.completed_reservations },
+        { name: 'Отменённые', value: stats.cancelled_reservations },
       ]
     : []
   const pieDataNonZero = pieData.filter((item) => item.value > 0)
 
   const barData = stats
     ? [
-        { name: 'Total Books', value: stats.total_books, fill: BOOK_COLORS.total },
-        { name: 'Available Books', value: stats.available_books, fill: BOOK_COLORS.available },
+        { name: 'Книг всего', value: stats.total_books, fill: BOOK_COLORS.total },
+        { name: 'Книг доступно', value: stats.available_books, fill: BOOK_COLORS.available },
       ]
     : []
 
   return (
     <div>
       <Title level={4} className="!mb-6">
-        My Library
+        Моя библиотека
       </Title>
 
       <Card className="!mb-6">
@@ -174,7 +174,7 @@ export default function StaffDashboardPage() {
       {!loadingPage && stats && (
         <Row gutter={[16, 16]} className="!mt-4">
           <Col xs={24} lg={12}>
-            <Card title="Reservation Breakdown">
+            <Card title="Распределение броней">
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -200,14 +200,14 @@ export default function StaffDashboardPage() {
             </Card>
           </Col>
           <Col xs={24} lg={12}>
-            <Card title="Books Overview">
+            <Card title="Книжный фонд">
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={barData}>
                   <XAxis dataKey="name" />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="value" name="Count">
+                  <Bar dataKey="value" name="Количество">
                     {barData.map((entry) => (
                       <Cell key={entry.name} fill={entry.fill} />
                     ))}
