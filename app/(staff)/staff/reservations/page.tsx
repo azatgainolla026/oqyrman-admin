@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import dynamic from 'next/dynamic'
-import { Table, Tabs, Tag, Button, Space, Typography, Input, Modal, message } from 'antd'
+import { Table, Tabs, Tag, Button, Space, Typography, Input, Modal, message, Descriptions, List, Avatar } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { QrcodeOutlined } from '@ant-design/icons'
+import { QrcodeOutlined, UserOutlined, BookOutlined } from '@ant-design/icons'
 import api from '@/lib/api'
 
 const QRScanner = dynamic(() => import('@/components/QRScanner'), { ssr: false })
 
-const { Title } = Typography
+const { Title, Text } = Typography
 const { Search } = Input
 
 type ReservationStatus = 'pending' | 'active' | 'completed' | 'cancelled'
@@ -28,14 +28,33 @@ type ReservationViewApiItem = {
   status?: ReservationStatus | string
   reserved_at?: string
   due_date?: string
-  // Nested structure from Swagger
   user?: { name?: string; surname?: string }
-  book?: { title?: string }
+  book?: { title?: string; cover_url?: string }
   library?: { name?: string }
-  // Possible flat structure (older backend)
   user_name?: string
   book_title?: string
   library_name?: string
+}
+
+interface LookupUser {
+  id: string
+  name: string
+  surname: string
+  email: string
+  phone: string
+  avatar_url?: string
+}
+
+interface LookupReservation {
+  id: string
+  book_title: string
+  book_cover_url: string
+  reserved_at: string
+}
+
+interface LookupResult {
+  user: LookupUser
+  reservations: LookupReservation[]
 }
 
 const STATUS_COLOR: Record<ReservationStatus, string> = {
@@ -68,23 +87,28 @@ export default function StaffReservationsPage() {
   const [page, setPage] = useState(1)
   const [actionId, setActionId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // QR scanner state
   const [scanOpen, setScanOpen] = useState(false)
   const [scanLoading, setScanLoading] = useState(false)
+
+  // Lookup result modal state
+  const [lookupResult, setLookupResult] = useState<LookupResult | null>(null)
+  const [lookupOpen, setLookupOpen] = useState(false)
+  const [confirmingId, setConfirmingId] = useState<string | null>(null)
+
   const pageSize = 20
   const isInitialMount = useRef(true)
 
   const extractItems = (payload: unknown): ReservationViewApiItem[] => {
     if (Array.isArray(payload)) return payload as ReservationViewApiItem[]
-
     const obj = payload as { items?: unknown }
     const itemsCandidate = obj.items
     if (Array.isArray(itemsCandidate)) return itemsCandidate as ReservationViewApiItem[]
-
     if (itemsCandidate && typeof itemsCandidate === 'object') {
       const nested = itemsCandidate as { items?: unknown }
       if (Array.isArray(nested.items)) return nested.items as ReservationViewApiItem[]
     }
-
     return []
   }
 
@@ -100,12 +124,10 @@ export default function StaffReservationsPage() {
       statusRaw === 'pending' || statusRaw === 'active' || statusRaw === 'completed' || statusRaw === 'cancelled'
         ? statusRaw
         : 'pending'
-
     const fullName = [item.user?.name, item.user?.surname]
       .map((part) => String(part ?? '').trim())
       .filter(Boolean)
       .join(' ')
-
     return {
       id: String(item.id ?? ''),
       status,
@@ -160,8 +182,7 @@ export default function StaffReservationsPage() {
   }, [page, activeTab, searchTerm, fetchReservations])
 
   const handleSearch = (value: string) => {
-    const trimmed = value.trim()
-    setSearchTerm(trimmed)
+    setSearchTerm(value.trim())
     setPage(1)
   }
 
@@ -182,20 +203,52 @@ export default function StaffReservationsPage() {
     }
   }
 
-  const handleScan = useCallback(async (token: string) => {
+  // Step 1: scan personal QR → lookup user + their pending reservations
+  const handleScan = useCallback(async (qrCode: string) => {
     setScanLoading(true)
     try {
-      await api.post('/staff/reservations/scan', { qr_token: token })
-      message.success('Книга выдана — бронь активирована')
+      const { data } = await api.post('/staff/users/qr-lookup', { qr_code: qrCode })
+
+      const reservationItems = (data.reservations ?? []) as ReservationViewApiItem[]
+      const mappedReservations: LookupReservation[] = reservationItems.map((r) => ({
+        id: String(r.id ?? ''),
+        book_title: String(r.book?.title ?? r.book_title ?? ''),
+        book_cover_url: String((r.book as { cover_url?: string } | undefined)?.cover_url ?? ''),
+        reserved_at: String(r.reserved_at ?? ''),
+      }))
+
+      const user = data.user as LookupUser
+      setLookupResult({ user, reservations: mappedReservations })
       setScanOpen(false)
-      fetchReservations(activeTab, page, searchTerm)
-    } catch {
-      message.error('QR-код не найден или бронь уже не в статусе pending')
+      setLookupOpen(true)
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status
+      if (status === 404) {
+        message.error('Пользователь с таким QR-кодом не найден')
+      } else {
+        message.error('Не удалось найти пользователя')
+      }
       setScanOpen(false)
     } finally {
       setScanLoading(false)
     }
-  }, [activeTab, page, searchTerm, fetchReservations])
+  }, [])
+
+  // Step 2: staff confirms — activate the selected reservation
+  const handleConfirmReservation = async (reservationId: string) => {
+    setConfirmingId(reservationId)
+    try {
+      await api.patch(`/staff/reservations/${reservationId}/status`, { status: 'active' })
+      message.success('Книга выдана')
+      setLookupOpen(false)
+      setLookupResult(null)
+      fetchReservations(activeTab, page, searchTerm)
+    } catch {
+      message.error('Не удалось выдать книгу')
+    } finally {
+      setConfirmingId(null)
+    }
+  }
 
   const confirm = (id: string) =>
     handleAction(
@@ -296,8 +349,9 @@ export default function StaffReservationsPage() {
         </Button>
       </div>
 
+      {/* Step 1 modal: camera scanner */}
       <Modal
-        title="Сканировать QR-код брони"
+        title="Сканировать читательский билет"
         open={scanOpen}
         onCancel={() => setScanOpen(false)}
         footer={null}
@@ -306,10 +360,87 @@ export default function StaffReservationsPage() {
       >
         {scanLoading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p>Обработка...</p>
+            <p>Поиск пользователя...</p>
           </div>
         ) : (
           <QRScanner active={scanOpen && !scanLoading} onScan={handleScan} />
+        )}
+      </Modal>
+
+      {/* Step 2 modal: user info + pending reservations */}
+      <Modal
+        title="Выдача книги"
+        open={lookupOpen}
+        onCancel={() => { setLookupOpen(false); setLookupResult(null) }}
+        footer={null}
+        width={520}
+        destroyOnHidden
+      >
+        {lookupResult && (
+          <div>
+            <Descriptions
+              bordered
+              size="small"
+              column={1}
+              style={{ marginBottom: 20 }}
+            >
+              <Descriptions.Item label={<><UserOutlined /> Пользователь</>}>
+                <Text strong>
+                  {lookupResult.user.name} {lookupResult.user.surname}
+                </Text>
+              </Descriptions.Item>
+              {lookupResult.user.email && (
+                <Descriptions.Item label="Email">
+                  {lookupResult.user.email}
+                </Descriptions.Item>
+              )}
+              {lookupResult.user.phone && (
+                <Descriptions.Item label="Телефон">
+                  {lookupResult.user.phone}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            {lookupResult.reservations.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#888' }}>
+                <BookOutlined style={{ fontSize: 32, marginBottom: 8 }} />
+                <p>Нет ожидающих броней в этой библиотеке</p>
+              </div>
+            ) : (
+              <>
+                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                  Выберите книгу для выдачи:
+                </Text>
+                <List
+                  dataSource={lookupResult.reservations}
+                  renderItem={(res) => (
+                    <List.Item
+                      actions={[
+                        <Button
+                          key="confirm"
+                          type="primary"
+                          loading={confirmingId === res.id}
+                          onClick={() => handleConfirmReservation(res.id)}
+                        >
+                          Выдать
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          res.book_cover_url
+                            ? <Avatar shape="square" size={48} src={res.book_cover_url} />
+                            : <Avatar shape="square" size={48} icon={<BookOutlined />} />
+                        }
+                        title={res.book_title}
+                        description={`Забронирована: ${new Date(res.reserved_at).toLocaleDateString('ru')}`}
+                      />
+                    </List.Item>
+                  )}
+                />
+              </>
+            )}
+          </div>
         )}
       </Modal>
 
