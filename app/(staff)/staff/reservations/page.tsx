@@ -50,11 +50,13 @@ interface LookupReservation {
   book_title: string
   book_cover_url: string
   reserved_at: string
+  due_date: string
 }
 
 interface LookupResult {
   user: LookupUser
-  reservations: LookupReservation[]
+  pending: LookupReservation[]
+  active: LookupReservation[]
 }
 
 const STATUS_COLOR: Record<ReservationStatus, string> = {
@@ -96,6 +98,7 @@ export default function StaffReservationsPage() {
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null)
   const [lookupOpen, setLookupOpen] = useState(false)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [returningId, setReturningId] = useState<string | null>(null)
 
   const pageSize = 20
   const isInitialMount = useRef(true)
@@ -203,22 +206,24 @@ export default function StaffReservationsPage() {
     }
   }
 
-  // Step 1: scan personal QR → lookup user + their pending reservations
+  const mapLookupItems = (items: ReservationViewApiItem[]): LookupReservation[] =>
+    items.map((r) => ({
+      id: String(r.id ?? ''),
+      book_title: String(r.book?.title ?? r.book_title ?? ''),
+      book_cover_url: String((r.book as { cover_url?: string } | undefined)?.cover_url ?? ''),
+      reserved_at: String(r.reserved_at ?? ''),
+      due_date: String(r.due_date ?? ''),
+    }))
+
+  // Step 1: scan personal QR → lookup user + their pending and active reservations
   const handleScan = useCallback(async (qrCode: string) => {
     setScanLoading(true)
     try {
       const { data } = await api.post('/staff/users/qr-lookup', { qr_code: qrCode })
-
-      const reservationItems = (data.reservations ?? []) as ReservationViewApiItem[]
-      const mappedReservations: LookupReservation[] = reservationItems.map((r) => ({
-        id: String(r.id ?? ''),
-        book_title: String(r.book?.title ?? r.book_title ?? ''),
-        book_cover_url: String((r.book as { cover_url?: string } | undefined)?.cover_url ?? ''),
-        reserved_at: String(r.reserved_at ?? ''),
-      }))
-
       const user = data.user as LookupUser
-      setLookupResult({ user, reservations: mappedReservations })
+      const pending = mapLookupItems((data.pending_reservations ?? []) as ReservationViewApiItem[])
+      const active = mapLookupItems((data.active_reservations ?? []) as ReservationViewApiItem[])
+      setLookupResult({ user, pending, active })
       setScanOpen(false)
       setLookupOpen(true)
     } catch (err: unknown) {
@@ -234,7 +239,7 @@ export default function StaffReservationsPage() {
     }
   }, [])
 
-  // Step 2: staff confirms — activate the selected reservation
+  // Step 2a: issue book (pending → active)
   const handleConfirmReservation = async (reservationId: string) => {
     setConfirmingId(reservationId)
     try {
@@ -247,6 +252,22 @@ export default function StaffReservationsPage() {
       message.error('Не удалось выдать книгу')
     } finally {
       setConfirmingId(null)
+    }
+  }
+
+  // Step 2b: return book (active → completed)
+  const handleReturnReservation = async (reservationId: string) => {
+    setReturningId(reservationId)
+    try {
+      await api.patch(`/staff/reservations/${reservationId}/return`)
+      message.success('Книга принята')
+      setLookupOpen(false)
+      setLookupResult(null)
+      fetchReservations(activeTab, page, searchTerm)
+    } catch {
+      message.error('Не удалось принять книгу')
+    } finally {
+      setReturningId(null)
     }
   }
 
@@ -367,57 +388,43 @@ export default function StaffReservationsPage() {
         )}
       </Modal>
 
-      {/* Step 2 modal: user info + pending reservations */}
+      {/* Step 2 modal: user info + pending (issue) + active (return) */}
       <Modal
-        title="Выдача книги"
+        title="Выдача / Возврат книги"
         open={lookupOpen}
         onCancel={() => { setLookupOpen(false); setLookupResult(null) }}
         footer={null}
-        width={520}
+        width={560}
         destroyOnHidden
       >
         {lookupResult && (
           <div>
-            <Descriptions
-              bordered
-              size="small"
-              column={1}
-              style={{ marginBottom: 20 }}
-            >
+            <Descriptions bordered size="small" column={1} style={{ marginBottom: 20 }}>
               <Descriptions.Item label={<><UserOutlined /> Пользователь</>}>
-                <Text strong>
-                  {lookupResult.user.name} {lookupResult.user.surname}
-                </Text>
+                <Text strong>{lookupResult.user.name} {lookupResult.user.surname}</Text>
               </Descriptions.Item>
               {lookupResult.user.email && (
-                <Descriptions.Item label="Email">
-                  {lookupResult.user.email}
-                </Descriptions.Item>
+                <Descriptions.Item label="Email">{lookupResult.user.email}</Descriptions.Item>
               )}
               {lookupResult.user.phone && (
-                <Descriptions.Item label="Телефон">
-                  {lookupResult.user.phone}
-                </Descriptions.Item>
+                <Descriptions.Item label="Телефон">{lookupResult.user.phone}</Descriptions.Item>
               )}
             </Descriptions>
 
-            {lookupResult.reservations.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: '#888' }}>
-                <BookOutlined style={{ fontSize: 32, marginBottom: 8 }} />
-                <p>Нет ожидающих броней в этой библиотеке</p>
-              </div>
-            ) : (
+            {/* Pending — issue */}
+            {lookupResult.pending.length > 0 && (
               <>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-                  Выберите книгу для выдачи:
+                  Ожидают получения:
                 </Text>
                 <List
-                  dataSource={lookupResult.reservations}
+                  dataSource={lookupResult.pending}
+                  style={{ marginBottom: 16 }}
                   renderItem={(res) => (
                     <List.Item
                       actions={[
                         <Button
-                          key="confirm"
+                          key="issue"
                           type="primary"
                           loading={confirmingId === res.id}
                           onClick={() => handleConfirmReservation(res.id)}
@@ -439,6 +446,50 @@ export default function StaffReservationsPage() {
                   )}
                 />
               </>
+            )}
+
+            {/* Active — return */}
+            {lookupResult.active.length > 0 && (
+              <>
+                {lookupResult.pending.length > 0 && <div style={{ borderTop: '1px solid #f0f0f0', marginBottom: 16 }} />}
+                <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+                  На руках:
+                </Text>
+                <List
+                  dataSource={lookupResult.active}
+                  renderItem={(res) => (
+                    <List.Item
+                      actions={[
+                        <Button
+                          key="return"
+                          loading={returningId === res.id}
+                          onClick={() => handleReturnReservation(res.id)}
+                        >
+                          Вернуть
+                        </Button>,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        avatar={
+                          res.book_cover_url
+                            ? <Avatar shape="square" size={48} src={res.book_cover_url} />
+                            : <Avatar shape="square" size={48} icon={<BookOutlined />} />
+                        }
+                        title={res.book_title}
+                        description={`Срок возврата: ${new Date(res.due_date).toLocaleDateString('ru')}`}
+                      />
+                    </List.Item>
+                  )}
+                />
+              </>
+            )}
+
+            {/* Empty state */}
+            {lookupResult.pending.length === 0 && lookupResult.active.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px 0', color: '#888' }}>
+                <BookOutlined style={{ fontSize: 32, marginBottom: 8 }} />
+                <p>Нет активных или ожидающих броней в этой библиотеке</p>
+              </div>
             )}
           </div>
         )}
