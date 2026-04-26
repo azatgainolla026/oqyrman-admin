@@ -115,6 +115,7 @@ export interface Library {
   lat: number
   lng: number
   phone: string
+  photo_url: string
 }
 
 export interface LibraryBook {

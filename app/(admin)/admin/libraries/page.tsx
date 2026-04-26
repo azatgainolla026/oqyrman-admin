@@ -114,6 +114,18 @@ export default function LibrariesPage() {
 
   const columns: ColumnsType<Library> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
+    {
+      title: 'Фото',
+      dataIndex: 'photo_url',
+      key: 'photo_url',
+      width: 72,
+      render: (url: string) =>
+        url ? (
+          <img src={url} alt="фото" className="w-12 h-10 object-cover rounded" />
+        ) : (
+          <span className="text-gray-300 text-xs">—</span>
+        ),
+    },
     { title: 'Название', dataIndex: 'name', key: 'name' },
     { title: 'Адрес', dataIndex: 'address', key: 'address' },
     { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
@@ -190,6 +202,9 @@ export default function LibrariesPage() {
           </Form.Item>
           <Form.Item name="lng" label="Долгота" rules={[{ required: true }]}>
             <InputNumber className="!w-full" />
+          </Form.Item>
+          <Form.Item name="photo_url" label="Фото (URL)">
+            <Input placeholder="https://..." />
           </Form.Item>
         </Form>
       </Modal>
