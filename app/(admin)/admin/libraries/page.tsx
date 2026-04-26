@@ -127,7 +127,6 @@ export default function LibrariesPage() {
       const { data } = await api.post<Library>(`/admin/libraries/${editing.id}/photo`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      form.setFieldValue('photo_url', data.photo_url)
       setEditing(data)
       message.success('Фото загружено')
     } catch {
@@ -135,7 +134,7 @@ export default function LibrariesPage() {
     } finally {
       setUploading(false)
     }
-    return false // prevent default antd upload behaviour
+    return false
   }
 
   const handleDelete = async (id: string) => {
@@ -242,12 +241,9 @@ export default function LibrariesPage() {
           <Form.Item label="Фото">
             {editing ? (
               <Space direction="vertical" className="w-full">
-                <Form.Item name="photo_url" noStyle>
-                  <Input placeholder="https://..." />
-                </Form.Item>
-                {form.getFieldValue('photo_url') && (
+                {editing.photo_url && (
                   <img
-                    src={form.getFieldValue('photo_url')}
+                    src={editing.photo_url}
                     alt="preview"
                     className="w-32 h-24 object-cover rounded border"
                   />
