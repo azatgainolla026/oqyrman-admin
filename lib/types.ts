@@ -60,6 +60,7 @@ export interface Book {
   isbn: string
   cover_url?: string
   description: string
+  description_kk?: string
   language: string
   year: number
   total_pages?: number
@@ -81,6 +82,7 @@ export interface BookViewResponse {
   isbn: string
   cover_url?: string
   description: string
+  description_kk?: string
   language: string
   year: number
   total_pages?: number
@@ -97,6 +99,7 @@ export interface Author {
   id: string
   name: string
   bio?: string
+  bio_kk?: string
   photo_url?: string
   birth_date?: string
   death_date?: string

@@ -128,6 +128,7 @@ export default function BooksPage() {
       genre_id: book.genre.id,
       isbn: book.isbn,
       description: book.description,
+      description_kk: book.description_kk,
       language: book.language,
       year: book.year,
       total_pages: book.total_pages,
@@ -155,6 +156,7 @@ export default function BooksPage() {
         formData.append('genre_id', values.genre_id)
         formData.append('isbn', values.isbn)
         formData.append('description', values.description)
+        if (values.description_kk) formData.append('description_kk', values.description_kk)
         formData.append('language', values.language)
         formData.append('year', String(values.year))
         if (createCoverFile) formData.append('cover', createCoverFile)
@@ -405,8 +407,11 @@ export default function BooksPage() {
           <Form.Item name="isbn" label="ISBN" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="description" label="Описание" rules={[{ required: true }]}>
+          <Form.Item name="description" label="Описание (RU)" rules={[{ required: true }]}>
             <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item name="description_kk" label="Описание (KK)">
+            <Input.TextArea rows={3} placeholder="Қазақша сипаттама (не обязательно)" />
           </Form.Item>
           <div className="grid grid-cols-2 gap-4">
             <Form.Item name="language" label="Язык" rules={[{ required: true }]}>
