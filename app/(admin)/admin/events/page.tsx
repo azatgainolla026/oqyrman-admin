@@ -35,6 +35,7 @@ export default function EventsPage() {
   const [search, setSearch] = useState('')
   const [form] = Form.useForm()
   const [createCoverFile, setCreateCoverFile] = useState<File | null>(null)
+  const [editCoverFile, setEditCoverFile] = useState<File | null>(null)
   const pageSize = 20
 
   const extractItems = (payload: unknown): Event[] => {
@@ -101,6 +102,7 @@ export default function EventsPage() {
 
   const openEdit = (event: Event) => {
     setEditing(event)
+    setEditCoverFile(null)
     form.setFieldsValue({
       title: event.title,
       description: event.description,
@@ -116,15 +118,14 @@ export default function EventsPage() {
     setSubmitting(true)
     try {
       if (editing) {
-        // Обновление события по JSON (обложка не меняется этим эндпоинтом)
-        const payload = {
-          title: values.title,
-          description: values.description,
-          location: values.location,
-          starts_at: values.dates[0].toISOString(),
-          ends_at: values.dates[1].toISOString(),
-        }
-        await api.put(`/admin/events/${editing.id}`, payload)
+        const formData = new FormData()
+        formData.append('title', values.title)
+        if (values.description) formData.append('description', values.description)
+        if (values.location) formData.append('location', values.location)
+        formData.append('starts_at', values.dates[0].toISOString())
+        formData.append('ends_at', values.dates[1].toISOString())
+        if (editCoverFile) formData.append('cover', editCoverFile)
+        await api.put(`/admin/events/${editing.id}`, formData)
         message.success('Событие обновлено')
       } else {
         if (!createCoverFile) {
@@ -272,7 +273,7 @@ export default function EventsPage() {
           <Form.Item name="location" label="Место проведения" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          {!editing && (
+          {!editing ? (
             <Form.Item
               label="Обложка"
               required
@@ -291,6 +292,28 @@ export default function EventsPage() {
               >
                 <Button icon={<UploadOutlined />}>Выбрать обложку</Button>
               </Upload>
+            </Form.Item>
+          ) : (
+            <Form.Item label="Обложка">
+              <Space direction="vertical">
+                {editing.cover_url && !editCoverFile && (
+                  <img src={editing.cover_url} alt="cover" className="w-24 h-24 object-cover rounded border" />
+                )}
+                <Upload
+                  beforeUpload={(file) => {
+                    setEditCoverFile(file)
+                    return false
+                  }}
+                  onRemove={() => setEditCoverFile(null)}
+                  maxCount={1}
+                  accept="image/*"
+                  listType="picture"
+                >
+                  <Button icon={<UploadOutlined />}>
+                    {editing.cover_url ? 'Заменить обложку' : 'Загрузить обложку'}
+                  </Button>
+                </Upload>
+              </Space>
             </Form.Item>
           )}
           <Form.Item name="dates" label="Период" rules={[{ required: true }]}>

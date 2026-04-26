@@ -12,9 +12,11 @@ import {
   InputNumber,
   Space,
   Popconfirm,
+  Upload,
 } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import type { RcFile } from 'antd/es/upload'
 import api from '@/lib/api'
 import type { Library, PaginatedResponse } from '@/lib/types'
 
@@ -30,6 +32,7 @@ export default function LibrariesPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Library | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [form] = Form.useForm()
   const pageSize = 20
 
@@ -100,6 +103,26 @@ export default function LibrariesPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handlePhotoUpload = async (file: RcFile) => {
+    if (!editing) return false
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('photo', file)
+      const { data } = await api.post<Library>(`/admin/libraries/${editing.id}/photo`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      form.setFieldValue('photo_url', data.photo_url)
+      setEditing(data)
+      message.success('Фото загружено')
+    } catch {
+      message.error('Не удалось загрузить фото')
+    } finally {
+      setUploading(false)
+    }
+    return false // prevent default antd upload behaviour
   }
 
   const handleDelete = async (id: string) => {
@@ -203,8 +226,34 @@ export default function LibrariesPage() {
           <Form.Item name="lng" label="Долгота" rules={[{ required: true }]}>
             <InputNumber className="!w-full" />
           </Form.Item>
-          <Form.Item name="photo_url" label="Фото (URL)">
-            <Input placeholder="https://..." />
+          <Form.Item label="Фото">
+            {editing ? (
+              <Space direction="vertical" className="w-full">
+                <Form.Item name="photo_url" noStyle>
+                  <Input placeholder="https://..." />
+                </Form.Item>
+                {form.getFieldValue('photo_url') && (
+                  <img
+                    src={form.getFieldValue('photo_url')}
+                    alt="preview"
+                    className="w-32 h-24 object-cover rounded border"
+                  />
+                )}
+                <Upload
+                  accept="image/jpeg,image/png,image/webp"
+                  showUploadList={false}
+                  beforeUpload={handlePhotoUpload}
+                >
+                  <Button icon={<UploadOutlined />} loading={uploading}>
+                    Загрузить фото
+                  </Button>
+                </Upload>
+              </Space>
+            ) : (
+              <Form.Item name="photo_url" noStyle>
+                <Input placeholder="https://..." />
+              </Form.Item>
+            )}
           </Form.Item>
         </Form>
       </Modal>
