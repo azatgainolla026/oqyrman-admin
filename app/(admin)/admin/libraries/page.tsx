@@ -33,6 +33,7 @@ export default function LibrariesPage() {
   const [editing, setEditing] = useState<Library | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [createPhotoFile, setCreatePhotoFile] = useState<File | null>(null)
   const [form] = Form.useForm()
   const pageSize = 20
 
@@ -75,6 +76,7 @@ export default function LibrariesPage() {
 
   const openCreate = () => {
     setEditing(null)
+    setCreatePhotoFile(null)
     form.resetFields()
     setModalOpen(true)
   }
@@ -93,7 +95,18 @@ export default function LibrariesPage() {
         await api.put(`/admin/libraries/${editing.id}`, values)
         message.success('Библиотека обновлена')
       } else {
-        await api.post('/admin/libraries', values)
+        const { data: newLib } = await api.post<Library>('/admin/libraries', values)
+        if (createPhotoFile) {
+          const formData = new FormData()
+          formData.append('photo', createPhotoFile)
+          try {
+            await api.post(`/admin/libraries/${newLib.id}/photo`, formData, {
+              headers: { 'Content-Type': 'multipart/form-data' },
+            })
+          } catch {
+            message.warning('Библиотека создана, но фото не загружено')
+          }
+        }
         message.success('Библиотека создана')
       }
       setModalOpen(false)
@@ -250,9 +263,15 @@ export default function LibrariesPage() {
                 </Upload>
               </Space>
             ) : (
-              <Form.Item name="photo_url" noStyle>
-                <Input placeholder="https://..." />
-              </Form.Item>
+              <Upload
+                accept="image/jpeg,image/png,image/webp"
+                listType="picture"
+                maxCount={1}
+                beforeUpload={(file) => { setCreatePhotoFile(file); return false }}
+                onRemove={() => setCreatePhotoFile(null)}
+              >
+                <Button icon={<UploadOutlined />}>Выбрать фото</Button>
+              </Upload>
             )}
           </Form.Item>
         </Form>
