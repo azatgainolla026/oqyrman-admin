@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Html5Qrcode } from 'html5-qrcode'
 import { Alert } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 interface QRScannerProps {
   onScan: (token: string) => void
@@ -10,6 +11,7 @@ interface QRScannerProps {
 }
 
 export default function QRScanner({ onScan, active }: QRScannerProps) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const scannedRef = useRef(false)
   const runningRef = useRef(false)
@@ -49,15 +51,15 @@ export default function QRScanner({ onScan, active }: QRScannerProps) {
           msg.toLowerCase().includes('permission') ||
           msg.toLowerCase().includes('notallowed')
         ) {
-          setError('Нет доступа к камере. Разрешите использование камеры в браузере.')
+          setError(t('qr.cameraPermission'))
         } else if (
           msg.toLowerCase().includes('notfound') ||
           msg.toLowerCase().includes('no camera') ||
           msg.toLowerCase().includes('device')
         ) {
-          setError('Камера не обнаружена на этом устройстве.')
+          setError(t('qr.cameraNotFound'))
         } else {
-          setError('Не удалось запустить камеру. Проверьте подключение устройства.')
+          setError(t('qr.cameraStartFailed'))
         }
       })
 
@@ -67,7 +69,7 @@ export default function QRScanner({ onScan, active }: QRScannerProps) {
         scanner.stop().catch(() => {})
       }
     }
-  }, [active, onScan])
+  }, [active, onScan, t])
 
   if (error) {
     return (

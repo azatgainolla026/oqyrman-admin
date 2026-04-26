@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AntdProvider from "@/components/AntdProvider";
+import I18nProvider from "@/components/I18nProvider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -34,7 +35,9 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-screen bg-[#f5f5f5]">
-        <AntdProvider>{children}</AntdProvider>
+        <I18nProvider>
+          <AntdProvider>{children}</AntdProvider>
+        </I18nProvider>
       </body>
     </html>
   );

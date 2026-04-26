@@ -16,6 +16,7 @@ import {
 } from 'antd'
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import type {
   UserViewResponse,
@@ -29,6 +30,7 @@ const { Title } = Typography
 const { Search } = Input
 
 export default function UsersPage() {
+  const { t, i18n } = useTranslation()
   const [users, setUsers] = useState<UserViewResponse[]>([])
   const [libraries, setLibraries] = useState<Library[]>([])
   const [loading, setLoading] = useState(true)
@@ -37,31 +39,23 @@ export default function UsersPage() {
   const [search, setSearch] = useState('')
   const [roleFilter, setRoleFilter] = useState<string | undefined>(undefined)
 
-  // Edit user modal
   const [editModalUser, setEditModalUser] = useState<UserViewResponse | null>(null)
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [editForm] = Form.useForm()
 
-  // Create staff modal
   const [createStaffOpen, setCreateStaffOpen] = useState(false)
   const [createSubmitting, setCreateSubmitting] = useState(false)
   const [createForm] = Form.useForm()
 
   const pageSize = 20
+  const dateLocale = i18n.language?.startsWith('kk') ? 'kk-KZ' : 'ru-RU'
 
   const fetchUsers = useCallback(
     async (p: number) => {
       setLoading(true)
       try {
-        const params: Record<string, unknown> = {
-          limit: pageSize,
-          offset: (p - 1) * pageSize,
-        }
-
-        const { data } = await api.get<PaginatedResponse<UserViewResponse>>(
-          '/admin/users',
-          { params },
-        )
+        const params: Record<string, unknown> = { limit: pageSize, offset: (p - 1) * pageSize }
+        const { data } = await api.get<PaginatedResponse<UserViewResponse>>('/admin/users', { params })
         const dataObj = data as { items?: UserViewResponse[] }
         const items: UserViewResponse[] = Array.isArray(dataObj.items) ? dataObj.items : []
         const query = search.trim().toLowerCase()
@@ -75,16 +69,15 @@ export default function UsersPage() {
             })
           : items
         const filtered = roleFilter ? filteredByQuery.filter((u) => u.role === roleFilter) : filteredByQuery
-
         setUsers(filtered)
         setTotal(filtered.length)
       } catch {
-        message.error('Не удалось загрузить пользователей')
+        message.error(t('users.loadFailed'))
       } finally {
         setLoading(false)
       }
     },
-    [search, roleFilter],
+    [search, roleFilter, t],
   )
 
   useEffect(() => {
@@ -97,7 +90,6 @@ export default function UsersPage() {
       .then(({ data }) => setLibraries(data.items))
   }, [])
 
-  // --- Search / filter handlers ---
   const handleSearch = (value: string) => {
     setSearch(value)
     setPage(1)
@@ -108,7 +100,6 @@ export default function UsersPage() {
     setPage(1)
   }
 
-  // --- Edit user ---
   const openEditModal = (user: UserViewResponse) => {
     setEditModalUser(user)
     editForm.setFieldsValue({
@@ -137,17 +128,16 @@ export default function UsersPage() {
         payload.library_id = values.library_id
       }
       await api.patch(`/admin/users/${editModalUser.id}`, payload)
-      message.success('Пользователь обновлён')
+      message.success(t('users.userUpdated'))
       setEditModalUser(null)
       fetchUsers(page)
     } catch {
-      message.error('Не удалось обновить пользователя')
+      message.error(t('users.updateFailed'))
     } finally {
       setEditSubmitting(false)
     }
   }
 
-  // --- Create staff ---
   const handleCreateStaff = async () => {
     const values = await createForm.validateFields()
     setCreateSubmitting(true)
@@ -161,25 +151,24 @@ export default function UsersPage() {
         phone: values.phone,
       }
       await api.post('/admin/users/staff', payload)
-      message.success('Сотрудник создан')
+      message.success(t('users.staffCreated'))
       setCreateStaffOpen(false)
       createForm.resetFields()
       fetchUsers(page)
     } catch {
-      message.error('Не удалось создать сотрудника')
+      message.error(t('users.createStaffFailed'))
     } finally {
       setCreateSubmitting(false)
     }
   }
 
-  // --- Delete ---
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/users/${id}`)
-      message.success('Пользователь удалён')
+      message.success(t('users.userDeleted'))
       fetchUsers(page)
     } catch {
-      message.error('Не удалось удалить пользователя')
+      message.error(t('users.deleteFailed'))
     }
   }
 
@@ -189,48 +178,56 @@ export default function UsersPage() {
     User: 'default',
   }
 
+  const ROLE_LABEL: Record<string, string> = {
+    Admin: t('users.roleAdmin'),
+    Staff: t('users.roleStaff'),
+    User: t('users.roleUser'),
+  }
+
   const editSelectedRole = Form.useWatch('role', editForm)
 
   const columns: ColumnsType<UserViewResponse> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
     {
-      title: 'Имя',
+      title: t('users.name'),
       key: 'name',
       render: (_, record) => `${record.name} ${record.surname}`,
     },
     { title: 'Email', dataIndex: 'email', key: 'email' },
-    { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
+    { title: t('users.phone'), dataIndex: 'phone', key: 'phone' },
     {
-      title: 'Библиотека',
+      title: t('users.library'),
       dataIndex: 'library_name',
       key: 'library_name',
       render: (val: string | undefined) => val ?? '—',
     },
     {
-      title: 'Роль',
+      title: t('users.role'),
       dataIndex: 'role',
       key: 'role',
       render: (role: string) => (
-        <Tag color={ROLE_COLOR[role] ?? 'default'}>{role}</Tag>
+        <Tag color={ROLE_COLOR[role] ?? 'default'}>{ROLE_LABEL[role] ?? role}</Tag>
       ),
     },
     {
-      title: 'Регистрация',
+      title: t('users.registration'),
       dataIndex: 'created_at',
       key: 'created_at',
-      render: (val: string) => new Date(val).toLocaleDateString(),
+      render: (val: string) => new Date(val).toLocaleDateString(dateLocale),
     },
     {
-      title: 'Действия',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space>
           <Button size="small" onClick={() => openEditModal(record)}>
-            Редактировать
+            {t('common.edit')}
           </Button>
           {record.role !== 'Admin' && (
             <Popconfirm
-              title="Удалить пользователя?"
+              title={t('users.deletePrompt')}
+              okText={t('common.yes')}
+              cancelText={t('common.no')}
               onConfirm={() => handleDelete(record.id)}
             >
               <Button danger size="small" icon={<DeleteOutlined />} />
@@ -245,33 +242,33 @@ export default function UsersPage() {
     <div>
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
         <Title level={4} className="!mb-0">
-          Пользователи
+          {t('users.title')}
         </Title>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setCreateStaffOpen(true)}
         >
-          Создать сотрудника
+          {t('users.createStaff')}
         </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <Search
-          placeholder="Поиск по имени или email"
+          placeholder={t('users.searchPlaceholder')}
           allowClear
           onSearch={handleSearch}
           className="sm:max-w-xs"
         />
         <Select
-          placeholder="Фильтр по роли"
+          placeholder={t('users.filterByRole')}
           allowClear
           onChange={handleRoleFilter}
           className="sm:w-40"
           options={[
-            { value: 'Admin', label: 'Администратор' },
-            { value: 'Staff', label: 'Сотрудник' },
-            { value: 'User', label: 'Пользователь' },
+            { value: 'Admin', label: t('users.roleAdmin') },
+            { value: 'Staff', label: t('users.roleStaff') },
+            { value: 'User', label: t('users.roleUser') },
           ]}
         />
       </div>
@@ -291,44 +288,45 @@ export default function UsersPage() {
         }}
       />
 
-      {/* Edit User Modal */}
       <Modal
-        title="Редактировать пользователя"
+        title={t('users.editUser')}
         open={!!editModalUser}
         onOk={handleEditSubmit}
         onCancel={() => setEditModalUser(null)}
         confirmLoading={editSubmitting}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
       >
         <Form form={editForm} layout="vertical" className="mt-4">
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="name" label="Имя" rules={[{ required: true }]}>
+          <Form.Item name="name" label={t('users.name')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="surname" label="Фамилия" rules={[{ required: true }]}>
+          <Form.Item name="surname" label={t('users.surname')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="phone" label="Телефон">
+          <Form.Item name="phone" label={t('users.phone')}>
             <Input />
           </Form.Item>
-          <Form.Item name="role" label="Роль" rules={[{ required: true }]}>
+          <Form.Item name="role" label={t('users.role')} rules={[{ required: true }]}>
             <Select
               options={[
-                { value: 'User', label: 'Пользователь' },
-                { value: 'Staff', label: 'Сотрудник' },
-                { value: 'Admin', label: 'Администратор' },
+                { value: 'User', label: t('users.roleUser') },
+                { value: 'Staff', label: t('users.roleStaff') },
+                { value: 'Admin', label: t('users.roleAdmin') },
               ]}
             />
           </Form.Item>
           {editSelectedRole === 'Staff' && (
             <Form.Item
               name="library_id"
-              label="Библиотека"
-              rules={[{ required: true, message: 'Укажите библиотеку для сотрудника' }]}
+              label={t('users.library')}
+              rules={[{ required: true, message: t('users.libraryRequired') }]}
             >
               <Select
-                placeholder="Выберите библиотеку"
+                placeholder={t('users.selectLibrary')}
                 options={libraries.map((l) => ({ value: l.id, label: l.name }))}
                 showSearch
                 filterOption={(input, option) =>
@@ -340,9 +338,8 @@ export default function UsersPage() {
         </Form>
       </Modal>
 
-      {/* Create Staff Modal */}
       <Modal
-        title="Создать сотрудника"
+        title={t('users.createStaff')}
         open={createStaffOpen}
         onOk={handleCreateStaff}
         onCancel={() => {
@@ -350,30 +347,32 @@ export default function UsersPage() {
           createForm.resetFields()
         }}
         confirmLoading={createSubmitting}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
       >
         <Form form={createForm} layout="vertical" className="mt-4">
           <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email' }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="name" label="Имя" rules={[{ required: true }]}>
+          <Form.Item name="name" label={t('users.name')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="surname" label="Фамилия" rules={[{ required: true }]}>
+          <Form.Item name="surname" label={t('users.surname')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="phone" label="Телефон" rules={[{ required: true }]}>
+          <Form.Item name="phone" label={t('users.phone')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="password" label="Пароль" rules={[{ required: true, min: 6 }]}>
+          <Form.Item name="password" label={t('users.password')} rules={[{ required: true, min: 6 }]}>
             <Input.Password />
           </Form.Item>
           <Form.Item
             name="library_id"
-            label="Библиотека"
-            rules={[{ required: true, message: 'Выберите библиотеку' }]}
+            label={t('users.library')}
+            rules={[{ required: true, message: t('users.libraryRequiredCreate') }]}
           >
             <Select
-              placeholder="Выберите библиотеку"
+              placeholder={t('users.selectLibrary')}
               options={libraries.map((l) => ({ value: l.id, label: l.name }))}
               showSearch
               filterOption={(input, option) =>

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Table, Tabs, Tag, Button, Space, Typography, message, Input } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 
 const { Title } = Typography
@@ -25,11 +26,9 @@ type ReservationViewApiItem = {
   status?: ReservationStatus | string
   reserved_at?: string
   due_date?: string
-  // Nested structure from Swagger
   user?: { name?: string; surname?: string }
   book?: { title?: string }
   library?: { name?: string }
-  // Possible flat structure (older backend)
   user_name?: string
   book_title?: string
   library_name?: string
@@ -42,22 +41,8 @@ const STATUS_COLOR: Record<ReservationStatus, string> = {
   cancelled: 'default',
 }
 
-const STATUS_LABEL: Record<ReservationStatus, string> = {
-  pending: 'Ожидает',
-  active: 'Активна',
-  completed: 'Завершена',
-  cancelled: 'Отменена',
-}
-
-const TAB_ITEMS = [
-  { key: 'all', label: 'Все' },
-  { key: 'pending', label: 'Ожидают' },
-  { key: 'active', label: 'Активные' },
-  { key: 'completed', label: 'Завершённые' },
-  { key: 'cancelled', label: 'Отменённые' },
-]
-
 export default function AdminReservationsPage() {
+  const { t, i18n } = useTranslation()
   const [activeTab, setActiveTab] = useState('all')
   const [reservations, setReservations] = useState<AdminReservation[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,18 +52,32 @@ export default function AdminReservationsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const pageSize = 20
 
+  const STATUS_LABEL: Record<ReservationStatus, string> = {
+    pending: t('reservations.statusPending'),
+    active: t('reservations.statusActive'),
+    completed: t('reservations.statusCompleted'),
+    cancelled: t('reservations.statusCancelled'),
+  }
+
+  const TAB_ITEMS = [
+    { key: 'all', label: t('reservations.tabAll') },
+    { key: 'pending', label: t('reservations.tabPending') },
+    { key: 'active', label: t('reservations.tabActive') },
+    { key: 'completed', label: t('reservations.tabCompleted') },
+    { key: 'cancelled', label: t('reservations.tabCancelled') },
+  ]
+
+  const dateLocale = i18n.language?.startsWith('kk') ? 'kk-KZ' : 'ru-RU'
+
   const extractItems = (payload: unknown): ReservationViewApiItem[] => {
     if (Array.isArray(payload)) return payload as ReservationViewApiItem[]
-
     const obj = payload as { items?: unknown }
     const itemsCandidate = obj.items
     if (Array.isArray(itemsCandidate)) return itemsCandidate as ReservationViewApiItem[]
-
     if (itemsCandidate && typeof itemsCandidate === 'object') {
       const nested = itemsCandidate as { items?: unknown }
       if (Array.isArray(nested.items)) return nested.items as ReservationViewApiItem[]
     }
-
     return []
   }
 
@@ -130,11 +129,12 @@ export default function AdminReservationsPage() {
         setReservations(filtered)
         setTotal(extractTotal(data) ?? filtered.length)
       } catch {
-        message.error('Не удалось загрузить брони')
+        message.error(t('reservations.loadFailed'))
       } finally {
         setLoading(false)
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pageSize]
   )
 
@@ -162,7 +162,7 @@ export default function AdminReservationsPage() {
       message.success(successMsg)
       fetchReservations(activeTab, page, searchQuery)
     } catch {
-      message.error('Действие не выполнено')
+      message.error(t('common.actionFailed'))
     } finally {
       setActionId(null)
     }
@@ -172,23 +172,23 @@ export default function AdminReservationsPage() {
     handleAction(
       id,
       () => api.patch(`/admin/reservations/${id}/status`, { status }),
-      'Статус обновлён'
+      t('reservations.statusUpdated')
     )
 
   const returnBook = (id: string) =>
     handleAction(
       id,
       () => api.patch(`/admin/reservations/${id}/return`),
-      'Книга возвращена'
+      t('reservations.bookReturned')
     )
 
   const columns: ColumnsType<AdminReservation> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
-    { title: 'Пользователь', dataIndex: 'user_name', key: 'user_name' },
-    { title: 'Книга', dataIndex: 'book_title', key: 'book_title' },
-    { title: 'Библиотека', dataIndex: 'library_name', key: 'library_name' },
+    { title: t('reservations.user'), dataIndex: 'user_name', key: 'user_name' },
+    { title: t('reservations.book'), dataIndex: 'book_title', key: 'book_title' },
+    { title: t('reservations.library'), dataIndex: 'library_name', key: 'library_name' },
     {
-      title: 'Статус',
+      title: t('reservations.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status: ReservationStatus) => (
@@ -196,19 +196,19 @@ export default function AdminReservationsPage() {
       ),
     },
     {
-      title: 'Забронирована',
+      title: t('reservations.reservedAt'),
       dataIndex: 'reserved_at',
       key: 'reserved_at',
-      render: (val: string) => new Date(val).toLocaleDateString('ru'),
+      render: (val: string) => new Date(val).toLocaleDateString(dateLocale),
     },
     {
-      title: 'Срок',
+      title: t('reservations.dueDate'),
       dataIndex: 'due_date',
       key: 'due_date',
-      render: (val: string) => new Date(val).toLocaleDateString('ru'),
+      render: (val: string) => new Date(val).toLocaleDateString(dateLocale),
     },
     {
-      title: 'Действия',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space size="small">
@@ -219,7 +219,7 @@ export default function AdminReservationsPage() {
               loading={actionId === record.id}
               onClick={() => changeStatus(record.id, 'active')}
             >
-              Подтвердить
+              {t('reservations.confirm')}
             </Button>
           )}
           {record.status === 'active' && (
@@ -228,7 +228,7 @@ export default function AdminReservationsPage() {
               loading={actionId === record.id}
               onClick={() => returnBook(record.id)}
             >
-              Возврат
+              {t('reservations.return')}
             </Button>
           )}
           {(record.status === 'pending' || record.status === 'active') && (
@@ -238,7 +238,7 @@ export default function AdminReservationsPage() {
               loading={actionId === record.id}
               onClick={() => changeStatus(record.id, 'cancelled')}
             >
-              Отменить
+              {t('reservations.cancel')}
             </Button>
           )}
         </Space>
@@ -249,7 +249,7 @@ export default function AdminReservationsPage() {
   return (
     <div>
       <Title level={4} className="!mb-6">
-        Брони
+        {t('reservations.title')}
       </Title>
 
       <Tabs
@@ -260,7 +260,7 @@ export default function AdminReservationsPage() {
       />
 
       <Search
-        placeholder="Поиск по имени пользователя"
+        placeholder={t('reservations.searchPlaceholder')}
         allowClear
         onSearch={handleSearch}
         className="!mb-4"

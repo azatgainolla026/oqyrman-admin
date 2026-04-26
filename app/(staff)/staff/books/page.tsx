@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { Table, Input, Typography, Tag, Select, message, Image } from 'antd'
 import { SearchOutlined, BookOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import type { Genre, LibraryBookSearchItem } from '@/lib/types'
 import Cookies from 'js-cookie'
@@ -24,6 +25,7 @@ interface EnrichedBook {
 }
 
 export default function StaffBooksPage() {
+  const { t } = useTranslation()
   const [allBooks, setAllBooks] = useState<EnrichedBook[]>([])
   const [filtered, setFiltered] = useState<EnrichedBook[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,14 +49,14 @@ export default function StaffBooksPage() {
       const list = Array.isArray(data) ? (data as Genre[]) : Array.isArray(dataObj.items) ? dataObj.items : []
       setGenres(list)
     } catch {
-      // silently ignore – genre filter will just be empty
+      // silently ignore
     }
   }, [])
 
   const fetchAllBooks = useCallback(async () => {
     const libraryId = Cookies.get('library_id')
     if (!libraryId) {
-      message.error('ID библиотеки не найден')
+      message.error(t('staff.libraryIdNotFound'))
       setLoading(false)
       return
     }
@@ -80,7 +82,6 @@ export default function StaffBooksPage() {
       const itemsCandidate = (Array.isArray(data) ? data : (dataObj.items as unknown)) as unknown
       const libraryBooks: LibraryBookViewApiItem[] = Array.isArray(itemsCandidate) ? (itemsCandidate as LibraryBookViewApiItem[]) : []
 
-      // Use nested `book` from the response to avoid N+1 requests to /books/{id}.
       const enriched: EnrichedBook[] = libraryBooks.map((lb) => {
         const libraryBookId = String(lb.id ?? '')
         const bookId = String(lb.book?.id ?? '')
@@ -101,18 +102,17 @@ export default function StaffBooksPage() {
       setAllBooks(enriched)
       setFiltered(enriched)
     } catch {
-      message.error('Не удалось загрузить книги')
+      message.error(t('books.loadFailed'))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     fetchAllBooks()
     fetchGenres()
   }, [fetchAllBooks, fetchGenres])
 
-  // Re-apply genre filter whenever selectedGenre changes
   useEffect(() => {
     if (!query.trim()) {
       setFiltered(applyGenreFilter(allBooks, selectedGenre))
@@ -150,7 +150,7 @@ export default function StaffBooksPage() {
 
       setFiltered(applyGenreFilter(mapped, selectedGenre))
     } catch {
-      message.error('Не удалось выполнить поиск')
+      message.error(t('books.searchFailed'))
     } finally {
       setSearchLoading(false)
     }
@@ -163,7 +163,6 @@ export default function StaffBooksPage() {
 
   const handleGenreChange = (value: string | undefined) => {
     setSelectedGenre(value)
-    // If there's an active search, re-run it so genre filter applies to search results
     if (query.trim()) {
       handleSearch(query)
     }
@@ -171,7 +170,7 @@ export default function StaffBooksPage() {
 
   const columns: ColumnsType<EnrichedBook> = [
     {
-      title: 'Обложка',
+      title: t('books.cover'),
       key: 'cover',
       width: 70,
       align: 'center',
@@ -194,27 +193,27 @@ export default function StaffBooksPage() {
           </div>
         ),
     },
-    { title: 'Название', dataIndex: 'title', key: 'title' },
-    { title: 'Автор', dataIndex: 'author', key: 'author' },
-    { title: 'Жанр', dataIndex: 'genre', key: 'genre', width: 140, ellipsis: true, render: (v: string | undefined) => v ?? '—' },
-    { title: 'Год', dataIndex: 'year', key: 'year', width: 80 },
-    { title: 'Страниц', dataIndex: 'total_pages', key: 'total_pages', width: 80, render: (v: number | undefined) => v ?? '—' },
+    { title: t('books.bookTitle'), dataIndex: 'title', key: 'title' },
+    { title: t('books.author'), dataIndex: 'author', key: 'author' },
+    { title: t('books.genre'), dataIndex: 'genre', key: 'genre', width: 140, ellipsis: true, render: (v: string | undefined) => v ?? '—' },
+    { title: t('books.year'), dataIndex: 'year', key: 'year', width: 80 },
+    { title: t('books.pages'), dataIndex: 'total_pages', key: 'total_pages', width: 80, render: (v: number | undefined) => v ?? '—' },
     {
-      title: 'Экз.',
+      title: t('books.copies'),
       key: 'copies',
       width: 100,
       render: (_, record) =>
         `${record.available_copies} / ${record.total_copies}`,
     },
     {
-      title: 'Доступна',
+      title: t('books.available'),
       key: 'available',
       width: 100,
       render: (_, record) =>
         record.available_copies > 0 ? (
-          <Tag color="green">Да</Tag>
+          <Tag color="green">{t('books.yesShort')}</Tag>
         ) : (
-          <Tag color="red">Нет</Tag>
+          <Tag color="red">{t('books.noShort')}</Tag>
         ),
     },
   ]
@@ -222,12 +221,12 @@ export default function StaffBooksPage() {
   return (
     <div>
       <Title level={4} className="!mb-6">
-        Книги
+        {t('books.title')}
       </Title>
 
       <div className="flex flex-wrap items-center gap-4 !mb-6">
         <Input.Search
-          placeholder="Поиск по названию или автору..."
+          placeholder={t('books.searchPlaceholder')}
           prefix={<SearchOutlined />}
           size="large"
           allowClear
@@ -243,7 +242,7 @@ export default function StaffBooksPage() {
         />
 
         <Select
-          placeholder="Фильтр по жанру"
+          placeholder={t('books.filterByGenre')}
           size="large"
           allowClear
           value={selectedGenre}
@@ -260,7 +259,7 @@ export default function StaffBooksPage() {
         loading={loading || searchLoading}
         scroll={{ x: 860 }}
         pagination={{ pageSize: 20 }}
-        locale={{ emptyText: 'Книги не найдены' }}
+        locale={{ emptyText: t('books.booksNotFound') }}
       />
     </div>
   )

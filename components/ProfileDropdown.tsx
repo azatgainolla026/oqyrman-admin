@@ -11,16 +11,15 @@ import {
   Button,
   App,
   Typography,
-  Divider,
 } from 'antd'
 import {
-  UserOutlined,
   EditOutlined,
   LockOutlined,
   LogoutOutlined,
   CameraOutlined,
 } from '@ant-design/icons'
 import type { MenuProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import { removeToken, getRefreshToken } from '@/lib/auth'
 
@@ -39,6 +38,7 @@ interface UserProfile {
 }
 
 export default function ProfileDropdown() {
+  const { t } = useTranslation()
   const { message } = App.useApp()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [profileModalOpen, setProfileModalOpen] = useState(false)
@@ -68,8 +68,8 @@ export default function ProfileDropdown() {
     : ''
 
   const fullName = profile
-    ? [profile.name, profile.surname].filter(Boolean).join(' ') || 'Пользователь'
-    : 'Пользователь'
+    ? [profile.name, profile.surname].filter(Boolean).join(' ') || t('profile.user')
+    : t('profile.user')
 
   const handleLogout = async () => {
     try {
@@ -84,7 +84,6 @@ export default function ProfileDropdown() {
     window.location.href = '/login'
   }
 
-  // --- Edit Profile ---
   const openProfileModal = () => {
     if (profile) {
       profileForm.setFieldsValue({
@@ -103,29 +102,27 @@ export default function ProfileDropdown() {
     try {
       const { data } = await api.put<UserProfile>('/users/me', values)
       setProfile(data)
-      message.success('Профиль обновлён')
+      message.success(t('profile.profileUpdated'))
       setProfileModalOpen(false)
     } catch {
-      message.error('Не удалось обновить профиль')
+      message.error(t('profile.profileUpdateFailed'))
     } finally {
       setSubmitting(false)
     }
   }
 
-  // --- Avatar Upload ---
   const handleAvatarUpload = async (file: File) => {
     const formData = new FormData()
     formData.append('file', file)
     try {
       const { data } = await api.post<UserProfile>('/users/me/avatar', formData)
       setProfile(data)
-      message.success('Аватар обновлён')
+      message.success(t('profile.avatarUpdated'))
     } catch {
-      message.error('Не удалось загрузить аватар')
+      message.error(t('profile.avatarUploadFailed'))
     }
   }
 
-  // --- Change Password ---
   const handlePasswordSubmit = async () => {
     const values = await passwordForm.validateFields()
     setSubmitting(true)
@@ -134,11 +131,11 @@ export default function ProfileDropdown() {
         old_password: values.old_password,
         new_password: values.new_password,
       })
-      message.success('Пароль изменён')
+      message.success(t('profile.passwordChanged'))
       setPasswordModalOpen(false)
       passwordForm.resetFields()
     } catch {
-      message.error('Не удалось изменить пароль')
+      message.error(t('profile.passwordChangeFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -168,13 +165,13 @@ export default function ProfileDropdown() {
     {
       key: 'edit',
       icon: <EditOutlined />,
-      label: 'Редактировать профиль',
+      label: t('profile.editProfile'),
       onClick: openProfileModal,
     },
     {
       key: 'password',
       icon: <LockOutlined />,
-      label: 'Сменить пароль',
+      label: t('profile.changePassword'),
       onClick: () => {
         passwordForm.resetFields()
         setPasswordModalOpen(true)
@@ -184,7 +181,7 @@ export default function ProfileDropdown() {
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: 'Выйти',
+      label: t('profile.logout'),
       danger: true,
       onClick: handleLogout,
     },
@@ -208,15 +205,14 @@ export default function ProfileDropdown() {
         </div>
       </Dropdown>
 
-      {/* Edit Profile Modal */}
       <Modal
-        title="Редактировать профиль"
+        title={t('profile.editProfile')}
         open={profileModalOpen}
         onCancel={() => setProfileModalOpen(false)}
         onOk={handleProfileSubmit}
         confirmLoading={submitting}
-        okText="Сохранить"
-        cancelText="Отмена"
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
       >
         <div className="flex justify-center my-4">
           <Upload
@@ -244,62 +240,61 @@ export default function ProfileDropdown() {
 
         <Form form={profileForm} layout="vertical">
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item name="name" label="Имя" rules={[{ required: true, message: 'Введите имя' }]}>
+            <Form.Item name="name" label={t('profile.name')} rules={[{ required: true, message: t('profile.enterName') }]}>
               <Input />
             </Form.Item>
-            <Form.Item name="surname" label="Фамилия" rules={[{ required: true, message: 'Введите фамилию' }]}>
+            <Form.Item name="surname" label={t('profile.surname')} rules={[{ required: true, message: t('profile.enterSurname') }]}>
               <Input />
             </Form.Item>
           </div>
-          <Form.Item name="email" label="Email" rules={[{ required: true, type: 'email', message: 'Введите email' }]}>
+          <Form.Item name="email" label={t('profile.email')} rules={[{ required: true, type: 'email', message: t('profile.enterEmail') }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="phone" label="Телефон">
+          <Form.Item name="phone" label={t('profile.phone')}>
             <Input />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* Change Password Modal */}
       <Modal
-        title="Сменить пароль"
+        title={t('profile.changePassword')}
         open={passwordModalOpen}
         onCancel={() => setPasswordModalOpen(false)}
         onOk={handlePasswordSubmit}
         confirmLoading={submitting}
-        okText="Изменить"
-        cancelText="Отмена"
+        okText={t('profile.change')}
+        cancelText={t('common.cancel')}
       >
         <Form form={passwordForm} layout="vertical" className="mt-4">
           <Form.Item
             name="old_password"
-            label="Текущий пароль"
-            rules={[{ required: true, message: 'Введите текущий пароль' }]}
+            label={t('profile.currentPassword')}
+            rules={[{ required: true, message: t('profile.enterCurrentPassword') }]}
           >
             <Input.Password />
           </Form.Item>
           <Form.Item
             name="new_password"
-            label="Новый пароль"
+            label={t('profile.newPassword')}
             rules={[
-              { required: true, message: 'Введите новый пароль' },
-              { min: 6, message: 'Минимум 6 символов' },
+              { required: true, message: t('profile.enterNewPassword') },
+              { min: 6, message: t('profile.passwordMin') },
             ]}
           >
             <Input.Password />
           </Form.Item>
           <Form.Item
             name="confirm_password"
-            label="Подтвердите пароль"
+            label={t('profile.confirmPassword')}
             dependencies={['new_password']}
             rules={[
-              { required: true, message: 'Подтвердите пароль' },
+              { required: true, message: t('profile.confirmPasswordPrompt') },
               ({ getFieldValue }) => ({
                 validator(_, value) {
                   if (!value || getFieldValue('new_password') === value) {
                     return Promise.resolve()
                   }
-                  return Promise.reject(new Error('Пароли не совпадают'))
+                  return Promise.reject(new Error(t('profile.passwordsDontMatch')))
                 },
               }),
             ]}

@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Button, Card, Form, Input, Typography, Alert } from 'antd'
 import axios from 'axios'
+import { useTranslation } from 'react-i18next'
 import { setTokens, getRole, removeToken } from '@/lib/auth'
 
 const { Title } = Typography
@@ -15,6 +16,7 @@ interface LoginForm {
 }
 
 export default function LoginPage() {
+  const { t } = useTranslation()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -22,7 +24,6 @@ export default function LoginPage() {
     setError(null)
     setLoading(true)
     try {
-      // Use raw axios — not the api instance which has 401 interceptor
       const { data } = await axios.post(`${API_URL}/auth/login`, values)
       setTokens(data.access_token, data.refresh_token)
 
@@ -34,10 +35,9 @@ export default function LoginPage() {
       } else if (role === 'library' || role === 'staff') {
         window.location.href = '/staff/dashboard'
       } else {
-        // Regular users cannot access admin panel
         removeToken()
         setLoading(false)
-        setError('Доступ запрещён. Только для администраторов и сотрудников.')
+        setError(t('login.accessDenied'))
         return
       }
     } catch (err: unknown) {
@@ -47,11 +47,11 @@ export default function LoginPage() {
           err.response.data?.error ||
           err.response.data?.message ||
           (err.response.status === 401
-            ? 'Неверный email или пароль'
-            : `Ошибка сервера (${err.response.status})`)
+            ? t('login.invalidCredentials')
+            : t('login.serverError', { status: err.response.status }))
         setError(msg)
       } else {
-        setError('Не удалось подключиться к серверу')
+        setError(t('login.connectError'))
       }
     }
   }
@@ -68,9 +68,9 @@ export default function LoginPage() {
             className="mb-3"
           />
           <Title level={3} className="!mb-1">
-            Oqyrman Admin
+            {t('login.title')}
           </Title>
-          <p className="text-gray-500 text-sm">Войдите в свой аккаунт</p>
+          <p className="text-gray-500 text-sm">{t('login.subtitle')}</p>
         </div>
 
         {error && (
@@ -91,20 +91,20 @@ export default function LoginPage() {
           autoComplete="off"
         >
           <Form.Item
-            label="Email"
+            label={t('login.email')}
             name="email"
             rules={[
-              { required: true, message: 'Введите email' },
-              { type: 'email', message: 'Некорректный email' },
+              { required: true, message: t('login.enterEmail') },
+              { type: 'email', message: t('login.invalidEmail') },
             ]}
           >
             <Input placeholder="admin@example.com" size="large" />
           </Form.Item>
 
           <Form.Item
-            label="Пароль"
+            label={t('login.password')}
             name="password"
-            rules={[{ required: true, message: 'Введите пароль' }]}
+            rules={[{ required: true, message: t('login.enterPassword') }]}
           >
             <Input.Password placeholder="••••••••" size="large" />
           </Form.Item>
@@ -117,7 +117,7 @@ export default function LoginPage() {
               block
               loading={loading}
             >
-              Войти
+              {t('login.submit')}
             </Button>
           </Form.Item>
         </Form>

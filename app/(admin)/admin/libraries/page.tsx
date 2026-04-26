@@ -17,6 +17,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import type { RcFile } from 'antd/es/upload'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import type { Library, PaginatedResponse } from '@/lib/types'
 
@@ -24,6 +25,7 @@ const { Title } = Typography
 const { Search } = Input
 
 export default function LibrariesPage() {
+  const { t } = useTranslation()
   const [libraries, setLibraries] = useState<Library[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -57,7 +59,7 @@ export default function LibrariesPage() {
       setLibraries(filtered)
       setTotal(filtered.length)
     } catch {
-      message.error('Не удалось загрузить библиотеки')
+      message.error(t('libraries.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -65,6 +67,7 @@ export default function LibrariesPage() {
 
   useEffect(() => {
     fetchLibraries(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
   const handleSearch = (value: string) => {
@@ -93,7 +96,7 @@ export default function LibrariesPage() {
     try {
       if (editing) {
         await api.put(`/admin/libraries/${editing.id}`, values)
-        message.success('Библиотека обновлена')
+        message.success(t('libraries.libraryUpdated'))
       } else {
         const { data: newLib } = await api.post<Library>('/admin/libraries', values)
         if (createPhotoFile) {
@@ -104,15 +107,15 @@ export default function LibrariesPage() {
               headers: { 'Content-Type': 'multipart/form-data' },
             })
           } catch {
-            message.warning('Библиотека создана, но фото не загружено')
+            message.warning(t('libraries.libraryCreatedNoPhoto'))
           }
         }
-        message.success('Библиотека создана')
+        message.success(t('libraries.libraryCreated'))
       }
       setModalOpen(false)
       fetchLibraries(page)
     } catch {
-      message.error('Не удалось сохранить библиотеку')
+      message.error(t('libraries.saveFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -128,9 +131,9 @@ export default function LibrariesPage() {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
       setEditing(data)
-      message.success('Фото загружено')
+      message.success(t('libraries.photoUploaded'))
     } catch {
-      message.error('Не удалось загрузить фото')
+      message.error(t('libraries.photoUploadFailed'))
     } finally {
       setUploading(false)
     }
@@ -140,38 +143,40 @@ export default function LibrariesPage() {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/libraries/${id}`)
-      message.success('Библиотека удалена')
+      message.success(t('libraries.libraryDeleted'))
       fetchLibraries(page)
     } catch {
-      message.error('Не удалось удалить библиотеку')
+      message.error(t('libraries.deleteFailed'))
     }
   }
 
   const columns: ColumnsType<Library> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
     {
-      title: 'Фото',
+      title: t('libraries.photo'),
       dataIndex: 'photo_url',
       key: 'photo_url',
       width: 72,
       render: (url: string) =>
         url ? (
-          <img src={url} alt="фото" className="w-12 h-10 object-cover rounded" />
+          <img src={url} alt="" className="w-12 h-10 object-cover rounded" />
         ) : (
           <span className="text-gray-300 text-xs">—</span>
         ),
     },
-    { title: 'Название', dataIndex: 'name', key: 'name' },
-    { title: 'Адрес', dataIndex: 'address', key: 'address' },
-    { title: 'Телефон', dataIndex: 'phone', key: 'phone' },
+    { title: t('libraries.name'), dataIndex: 'name', key: 'name' },
+    { title: t('libraries.address'), dataIndex: 'address', key: 'address' },
+    { title: t('libraries.phone'), dataIndex: 'phone', key: 'phone' },
     {
-      title: 'Действия',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           <Popconfirm
-            title="Удалить эту библиотеку?"
+            title={t('libraries.deletePrompt')}
+            okText={t('common.yes')}
+            cancelText={t('common.no')}
             onConfirm={() => handleDelete(record.id)}
           >
             <Button danger size="small" icon={<DeleteOutlined />} />
@@ -185,17 +190,17 @@ export default function LibrariesPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <Title level={4} className="!mb-0">
-          Библиотеки
+          {t('libraries.title')}
         </Title>
         <Space>
           <Search
-            placeholder="Поиск по названию или адресу"
+            placeholder={t('libraries.searchPlaceholder')}
             allowClear
             onSearch={handleSearch}
             style={{ width: 250 }}
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            Добавить библиотеку
+            {t('libraries.addLibrary')}
           </Button>
         </Space>
       </div>
@@ -216,29 +221,31 @@ export default function LibrariesPage() {
       />
 
       <Modal
-        title={editing ? 'Редактировать библиотеку' : 'Добавить библиотеку'}
+        title={editing ? t('libraries.editLibrary') : t('libraries.addLibrary')}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         confirmLoading={submitting}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
       >
         <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="name" label="Название" rules={[{ required: true }]}>
+          <Form.Item name="name" label={t('libraries.name')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="address" label="Адрес" rules={[{ required: true }]}>
+          <Form.Item name="address" label={t('libraries.address')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="phone" label="Телефон">
+          <Form.Item name="phone" label={t('libraries.phone')}>
             <Input />
           </Form.Item>
-          <Form.Item name="lat" label="Широта" rules={[{ required: true }]}>
+          <Form.Item name="lat" label={t('libraries.lat')} rules={[{ required: true }]}>
             <InputNumber className="!w-full" />
           </Form.Item>
-          <Form.Item name="lng" label="Долгота" rules={[{ required: true }]}>
+          <Form.Item name="lng" label={t('libraries.lng')} rules={[{ required: true }]}>
             <InputNumber className="!w-full" />
           </Form.Item>
-          <Form.Item label="Фото">
+          <Form.Item label={t('libraries.photo')}>
             {editing ? (
               <Space direction="vertical" className="w-full">
                 {editing.photo_url && (
@@ -254,7 +261,7 @@ export default function LibrariesPage() {
                   beforeUpload={handlePhotoUpload}
                 >
                   <Button icon={<UploadOutlined />} loading={uploading}>
-                    Загрузить фото
+                    {t('libraries.uploadPhoto')}
                   </Button>
                 </Upload>
               </Space>
@@ -266,7 +273,7 @@ export default function LibrariesPage() {
                 beforeUpload={(file) => { setCreatePhotoFile(file); return false }}
                 onRemove={() => setCreatePhotoFile(null)}
               >
-                <Button icon={<UploadOutlined />}>Выбрать фото</Button>
+                <Button icon={<UploadOutlined />}>{t('libraries.choosePhoto')}</Button>
               </Upload>
             )}
           </Form.Item>

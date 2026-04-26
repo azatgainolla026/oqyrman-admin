@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { Table, Tabs, Tag, Button, Space, Typography, Input, Modal, message, Descriptions, List, Avatar } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { QrcodeOutlined, UserOutlined, BookOutlined } from '@ant-design/icons'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 
 const QRScanner = dynamic(() => import('@/components/QRScanner'), { ssr: false })
@@ -66,22 +67,8 @@ const STATUS_COLOR: Record<ReservationStatus, string> = {
   cancelled: 'default',
 }
 
-const STATUS_LABEL: Record<ReservationStatus, string> = {
-  pending: 'Ожидает',
-  active: 'Активна',
-  completed: 'Завершена',
-  cancelled: 'Отменена',
-}
-
-const TAB_ITEMS = [
-  { key: 'all', label: 'Все' },
-  { key: 'pending', label: 'Ожидают' },
-  { key: 'active', label: 'Активные' },
-  { key: 'completed', label: 'Завершённые' },
-  { key: 'cancelled', label: 'Отменённые' },
-]
-
 export default function StaffReservationsPage() {
+  const { t, i18n } = useTranslation()
   const [activeTab, setActiveTab] = useState('all')
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
@@ -90,11 +77,9 @@ export default function StaffReservationsPage() {
   const [actionId, setActionId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // QR scanner state
   const [scanOpen, setScanOpen] = useState(false)
   const [scanLoading, setScanLoading] = useState(false)
 
-  // Lookup result modal state
   const [lookupResult, setLookupResult] = useState<LookupResult | null>(null)
   const [lookupOpen, setLookupOpen] = useState(false)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
@@ -102,6 +87,22 @@ export default function StaffReservationsPage() {
 
   const pageSize = 20
   const isInitialMount = useRef(true)
+  const dateLocale = i18n.language?.startsWith('kk') ? 'kk-KZ' : 'ru-RU'
+
+  const STATUS_LABEL: Record<ReservationStatus, string> = {
+    pending: t('reservations.statusPending'),
+    active: t('reservations.statusActive'),
+    completed: t('reservations.statusCompleted'),
+    cancelled: t('reservations.statusCancelled'),
+  }
+
+  const TAB_ITEMS = [
+    { key: 'all', label: t('reservations.tabAll') },
+    { key: 'pending', label: t('reservations.tabPending') },
+    { key: 'active', label: t('reservations.tabActive') },
+    { key: 'completed', label: t('reservations.tabCompleted') },
+    { key: 'cancelled', label: t('reservations.tabCancelled') },
+  ]
 
   const extractItems = (payload: unknown): ReservationViewApiItem[] => {
     if (Array.isArray(payload)) return payload as ReservationViewApiItem[]
@@ -160,11 +161,12 @@ export default function StaffReservationsPage() {
         setReservations(filtered)
         setTotal(extractTotal(data) ?? filtered.length)
       } catch {
-        message.error('Не удалось загрузить брони')
+        message.error(t('reservations.loadFailed'))
       } finally {
         setLoading(false)
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [pageSize]
   )
 
@@ -200,7 +202,7 @@ export default function StaffReservationsPage() {
       message.success(successMsg)
       fetchReservations(activeTab, page, searchTerm)
     } catch {
-      message.error('Действие не выполнено')
+      message.error(t('common.actionFailed'))
     } finally {
       setActionId(null)
     }
@@ -215,57 +217,57 @@ export default function StaffReservationsPage() {
       due_date: String(r.due_date ?? ''),
     }))
 
-  // Step 1: scan personal QR → lookup user + their pending and active reservations
-  const handleScan = useCallback(async (qrCode: string) => {
-    setScanLoading(true)
-    try {
-      const { data } = await api.post('/staff/users/qr-lookup', { qr_code: qrCode })
-      const user = data.user as LookupUser
-      const pending = mapLookupItems((data.pending_reservations ?? []) as ReservationViewApiItem[])
-      const active = mapLookupItems((data.active_reservations ?? []) as ReservationViewApiItem[])
-      setLookupResult({ user, pending, active })
-      setScanOpen(false)
-      setLookupOpen(true)
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (status === 404) {
-        message.error('Пользователь с таким QR-кодом не найден')
-      } else {
-        message.error('Не удалось найти пользователя')
+  const handleScan = useCallback(
+    async (qrCode: string) => {
+      setScanLoading(true)
+      try {
+        const { data } = await api.post('/staff/users/qr-lookup', { qr_code: qrCode })
+        const user = data.user as LookupUser
+        const pending = mapLookupItems((data.pending_reservations ?? []) as ReservationViewApiItem[])
+        const active = mapLookupItems((data.active_reservations ?? []) as ReservationViewApiItem[])
+        setLookupResult({ user, pending, active })
+        setScanOpen(false)
+        setLookupOpen(true)
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number } })?.response?.status
+        if (status === 404) {
+          message.error(t('reservations.userNotFound'))
+        } else {
+          message.error(t('reservations.lookupFailed'))
+        }
+        setScanOpen(false)
+      } finally {
+        setScanLoading(false)
       }
-      setScanOpen(false)
-    } finally {
-      setScanLoading(false)
-    }
-  }, [])
+    },
+    [t]
+  )
 
-  // Step 2a: issue book (pending → active)
   const handleConfirmReservation = async (reservationId: string) => {
     setConfirmingId(reservationId)
     try {
       await api.patch(`/staff/reservations/${reservationId}/status`, { status: 'active' })
-      message.success('Книга выдана')
+      message.success(t('reservations.bookIssued'))
       setLookupOpen(false)
       setLookupResult(null)
       fetchReservations(activeTab, page, searchTerm)
     } catch {
-      message.error('Не удалось выдать книгу')
+      message.error(t('reservations.issueFailed'))
     } finally {
       setConfirmingId(null)
     }
   }
 
-  // Step 2b: return book (active → completed)
   const handleReturnReservation = async (reservationId: string) => {
     setReturningId(reservationId)
     try {
       await api.patch(`/staff/reservations/${reservationId}/return`)
-      message.success('Книга принята')
+      message.success(t('reservations.bookAccepted'))
       setLookupOpen(false)
       setLookupResult(null)
       fetchReservations(activeTab, page, searchTerm)
     } catch {
-      message.error('Не удалось принять книгу')
+      message.error(t('reservations.returnFailed'))
     } finally {
       setReturningId(null)
     }
@@ -275,29 +277,29 @@ export default function StaffReservationsPage() {
     handleAction(
       id,
       () => api.patch(`/staff/reservations/${id}/status`, { status: 'active' }),
-      'Бронь подтверждена'
+      t('reservations.reservationConfirmed')
     )
 
   const returnBook = (id: string) =>
     handleAction(
       id,
       () => api.patch(`/staff/reservations/${id}/return`),
-      'Книга возвращена'
+      t('reservations.bookReturned')
     )
 
   const cancel = (id: string) =>
     handleAction(
       id,
       () => api.patch(`/staff/reservations/${id}/cancel`),
-      'Бронь отменена'
+      t('reservations.reservationCancelled')
     )
 
   const columns: ColumnsType<Reservation> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 90, ellipsis: true },
-    { title: 'Пользователь', dataIndex: 'user_name', key: 'user_name' },
-    { title: 'Книга', dataIndex: 'book_title', key: 'book_title' },
+    { title: t('reservations.user'), dataIndex: 'user_name', key: 'user_name' },
+    { title: t('reservations.book'), dataIndex: 'book_title', key: 'book_title' },
     {
-      title: 'Статус',
+      title: t('reservations.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status: ReservationStatus) => (
@@ -305,19 +307,19 @@ export default function StaffReservationsPage() {
       ),
     },
     {
-      title: 'Забронирована',
+      title: t('reservations.reservedAt'),
       dataIndex: 'reserved_at',
       key: 'reserved_at',
-      render: (val: string) => new Date(val).toLocaleDateString('ru'),
+      render: (val: string) => new Date(val).toLocaleDateString(dateLocale),
     },
     {
-      title: 'Срок',
+      title: t('reservations.dueDate'),
       dataIndex: 'due_date',
       key: 'due_date',
-      render: (val: string) => new Date(val).toLocaleDateString('ru'),
+      render: (val: string) => new Date(val).toLocaleDateString(dateLocale),
     },
     {
-      title: 'Действия',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space size="small">
@@ -328,7 +330,7 @@ export default function StaffReservationsPage() {
               loading={actionId === record.id}
               onClick={() => confirm(record.id)}
             >
-              Подтвердить
+              {t('reservations.confirm')}
             </Button>
           )}
           {record.status === 'active' && (
@@ -337,7 +339,7 @@ export default function StaffReservationsPage() {
               loading={actionId === record.id}
               onClick={() => returnBook(record.id)}
             >
-              Возврат
+              {t('reservations.return')}
             </Button>
           )}
           {(record.status === 'pending' || record.status === 'active') && (
@@ -347,7 +349,7 @@ export default function StaffReservationsPage() {
               loading={actionId === record.id}
               onClick={() => cancel(record.id)}
             >
-              Отменить
+              {t('reservations.cancel')}
             </Button>
           )}
         </Space>
@@ -359,20 +361,19 @@ export default function StaffReservationsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <Title level={4} className="!mb-0">
-          Брони
+          {t('reservations.title')}
         </Title>
         <Button
           type="primary"
           icon={<QrcodeOutlined />}
           onClick={() => setScanOpen(true)}
         >
-          Сканировать QR
+          {t('reservations.scanQR')}
         </Button>
       </div>
 
-      {/* Step 1 modal: camera scanner */}
       <Modal
-        title="Сканировать читательский билет"
+        title={t('reservations.scanLibraryCard')}
         open={scanOpen}
         onCancel={() => setScanOpen(false)}
         footer={null}
@@ -381,16 +382,15 @@ export default function StaffReservationsPage() {
       >
         {scanLoading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}>
-            <p>Поиск пользователя...</p>
+            <p>{t('reservations.searchingUser')}</p>
           </div>
         ) : (
           <QRScanner active={scanOpen && !scanLoading} onScan={handleScan} />
         )}
       </Modal>
 
-      {/* Step 2 modal: user info + pending (issue) + active (return) */}
       <Modal
-        title="Выдача / Возврат книги"
+        title={t('reservations.issueOrReturn')}
         open={lookupOpen}
         onCancel={() => { setLookupOpen(false); setLookupResult(null) }}
         footer={null}
@@ -400,22 +400,21 @@ export default function StaffReservationsPage() {
         {lookupResult && (
           <div>
             <Descriptions bordered size="small" column={1} style={{ marginBottom: 20 }}>
-              <Descriptions.Item label={<><UserOutlined /> Пользователь</>}>
+              <Descriptions.Item label={<><UserOutlined /> {t('reservations.user')}</>}>
                 <Text strong>{lookupResult.user.name} {lookupResult.user.surname}</Text>
               </Descriptions.Item>
               {lookupResult.user.email && (
                 <Descriptions.Item label="Email">{lookupResult.user.email}</Descriptions.Item>
               )}
               {lookupResult.user.phone && (
-                <Descriptions.Item label="Телефон">{lookupResult.user.phone}</Descriptions.Item>
+                <Descriptions.Item label={t('users.phone')}>{lookupResult.user.phone}</Descriptions.Item>
               )}
             </Descriptions>
 
-            {/* Pending — issue */}
             {lookupResult.pending.length > 0 && (
               <>
                 <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-                  Ожидают получения:
+                  {t('reservations.pendingPickup')}
                 </Text>
                 <List
                   dataSource={lookupResult.pending}
@@ -429,7 +428,7 @@ export default function StaffReservationsPage() {
                           loading={confirmingId === res.id}
                           onClick={() => handleConfirmReservation(res.id)}
                         >
-                          Выдать
+                          {t('reservations.issue')}
                         </Button>,
                       ]}
                     >
@@ -440,7 +439,9 @@ export default function StaffReservationsPage() {
                             : <Avatar shape="square" size={48} icon={<BookOutlined />} />
                         }
                         title={res.book_title}
-                        description={`Забронирована: ${new Date(res.reserved_at).toLocaleDateString('ru')}`}
+                        description={t('reservations.reservedDate', {
+                          date: new Date(res.reserved_at).toLocaleDateString(dateLocale),
+                        })}
                       />
                     </List.Item>
                   )}
@@ -448,12 +449,11 @@ export default function StaffReservationsPage() {
               </>
             )}
 
-            {/* Active — return */}
             {lookupResult.active.length > 0 && (
               <>
                 {lookupResult.pending.length > 0 && <div style={{ borderTop: '1px solid #f0f0f0', marginBottom: 16 }} />}
                 <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
-                  На руках:
+                  {t('reservations.onHands')}
                 </Text>
                 <List
                   dataSource={lookupResult.active}
@@ -465,7 +465,7 @@ export default function StaffReservationsPage() {
                           loading={returningId === res.id}
                           onClick={() => handleReturnReservation(res.id)}
                         >
-                          Вернуть
+                          {t('reservations.returnBtn')}
                         </Button>,
                       ]}
                     >
@@ -476,7 +476,9 @@ export default function StaffReservationsPage() {
                             : <Avatar shape="square" size={48} icon={<BookOutlined />} />
                         }
                         title={res.book_title}
-                        description={`Срок возврата: ${new Date(res.due_date).toLocaleDateString('ru')}`}
+                        description={t('reservations.dueDateLabel', {
+                          date: new Date(res.due_date).toLocaleDateString(dateLocale),
+                        })}
                       />
                     </List.Item>
                   )}
@@ -484,11 +486,10 @@ export default function StaffReservationsPage() {
               </>
             )}
 
-            {/* Empty state */}
             {lookupResult.pending.length === 0 && lookupResult.active.length === 0 && (
               <div style={{ textAlign: 'center', padding: '24px 0', color: '#888' }}>
                 <BookOutlined style={{ fontSize: 32, marginBottom: 8 }} />
-                <p>Нет активных или ожидающих броней в этой библиотеке</p>
+                <p>{t('reservations.noReservations')}</p>
               </div>
             )}
           </div>
@@ -503,7 +504,7 @@ export default function StaffReservationsPage() {
       />
 
       <Search
-        placeholder="Поиск по имени пользователя"
+        placeholder={t('reservations.searchPlaceholder')}
         allowClear
         onSearch={handleSearch}
         className="!mb-4"

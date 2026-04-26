@@ -170,7 +170,9 @@ export interface ReservationViewResponse {
 export interface Event {
   id: string
   title: string
+  title_kk?: string
   description: string
+  description_kk?: string
   location?: string
   cover_url?: string
   starts_at: string

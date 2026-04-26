@@ -18,6 +18,7 @@ import {
 import { PlusOutlined, EditOutlined, DeleteOutlined, PictureOutlined, UploadOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import type { Event } from '@/lib/types'
 
@@ -25,6 +26,7 @@ const { Title } = Typography
 const { RangePicker } = DatePicker
 
 export default function EventsPage() {
+  const { t } = useTranslation()
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [total, setTotal] = useState(0)
@@ -40,16 +42,13 @@ export default function EventsPage() {
 
   const extractItems = (payload: unknown): Event[] => {
     if (Array.isArray(payload)) return payload as Event[]
-
     const obj = payload as { items?: unknown }
     const itemsCandidate = obj.items
     if (Array.isArray(itemsCandidate)) return itemsCandidate as Event[]
-
     if (itemsCandidate && typeof itemsCandidate === 'object') {
       const nested = itemsCandidate as { items?: unknown }
       if (Array.isArray(nested.items)) return nested.items as Event[]
     }
-
     return []
   }
 
@@ -76,7 +75,7 @@ export default function EventsPage() {
       setEvents(filtered)
       setTotal(extractTotal(data) ?? filtered.length)
     } catch {
-      message.error('Не удалось загрузить события')
+      message.error(t('events.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -84,6 +83,7 @@ export default function EventsPage() {
 
   useEffect(() => {
     fetchEvents(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page])
 
   const handleSearch = (value: string) => {
@@ -105,7 +105,9 @@ export default function EventsPage() {
     setEditCoverFile(null)
     form.setFieldsValue({
       title: event.title,
+      title_kk: (event as Event & { title_kk?: string }).title_kk,
       description: event.description,
+      description_kk: (event as Event & { description_kk?: string }).description_kk,
       location: event.location,
       dates: [dayjs(event.starts_at), dayjs(event.ends_at)],
     })
@@ -120,35 +122,39 @@ export default function EventsPage() {
       if (editing) {
         const formData = new FormData()
         formData.append('title', values.title)
+        if (values.title_kk) formData.append('title_kk', values.title_kk)
         if (values.description) formData.append('description', values.description)
+        if (values.description_kk) formData.append('description_kk', values.description_kk)
         if (values.location) formData.append('location', values.location)
         formData.append('starts_at', values.dates[0].toISOString())
         formData.append('ends_at', values.dates[1].toISOString())
         if (editCoverFile) formData.append('cover', editCoverFile)
         await api.put(`/admin/events/${editing.id}`, formData)
-        message.success('Событие обновлено')
+        message.success(t('events.eventUpdated'))
       } else {
         if (!createCoverFile) {
-          message.error('Загрузите обложку события')
+          message.error(t('events.coverRequired'))
           setSubmitting(false)
           return
         }
 
         const formData = new FormData()
         formData.append('title', values.title)
+        if (values.title_kk) formData.append('title_kk', values.title_kk)
         if (values.description) formData.append('description', values.description)
+        if (values.description_kk) formData.append('description_kk', values.description_kk)
         if (values.location) formData.append('location', values.location)
         formData.append('starts_at', values.dates[0].toISOString())
         formData.append('ends_at', values.dates[1].toISOString())
         formData.append('cover', createCoverFile)
 
         await api.post('/admin/events', formData)
-        message.success('Событие создано')
+        message.success(t('events.eventCreated'))
       }
       setModalOpen(false)
       fetchEvents(page)
     } catch {
-      message.error('Не удалось сохранить событие')
+      message.error(t('events.saveFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -157,16 +163,16 @@ export default function EventsPage() {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/events/${id}`)
-      message.success('Событие удалено')
+      message.success(t('events.eventDeleted'))
       fetchEvents(page)
     } catch {
-      message.error('Не удалось удалить событие')
+      message.error(t('events.deleteFailed'))
     }
   }
 
   const columns: ColumnsType<Event> = [
     {
-      title: 'Обложка',
+      title: t('events.cover'),
       key: 'cover',
       width: 80,
       align: 'center',
@@ -178,7 +184,6 @@ export default function EventsPage() {
             width={48}
             height={48}
             style={{ objectFit: 'cover', borderRadius: 6 }}
-            fallback="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSI4IiBmaWxsPSIjZjVmNWY1Ii8+PHBhdGggZD0iTTI0IDI4QzI2LjIwOTEgMjggMjggMjYuMjA5MSAyOCAyNEMyOCAyMS43OTA5IDI2LjIwOTEgMjAgMjQgMjBDMjEuNzkwOSAyMCAyMCAyMS43OTA5IDIwIDI0QzIwIDI2LjIwOTEgMjEuNzkwOSAyOCAyNCAyOFoiIGZpbGw9IiNjY2MiLz48Y2lyY2xlIGN4PSIyNCIgY3k9IjIwIiByPSI0IiBmaWxsPSIjZWVlIi8+PC9zdmc+"
             preview={{ mask: false }}
           />
         ) : (
@@ -190,29 +195,31 @@ export default function EventsPage() {
           </div>
         ),
     },
-    { title: 'Название', dataIndex: 'title', key: 'title' },
-    { title: 'Место', dataIndex: 'location', key: 'location' },
-    { title: 'Описание', dataIndex: 'description', key: 'description', ellipsis: true },
+    { title: t('events.eventTitle'), dataIndex: 'title', key: 'title' },
+    { title: t('events.location'), dataIndex: 'location', key: 'location' },
+    { title: t('events.description'), dataIndex: 'description', key: 'description', ellipsis: true },
     {
-      title: 'Начало',
+      title: t('events.starts'),
       dataIndex: 'starts_at',
       key: 'starts_at',
       render: (val: string) => new Date(val).toLocaleDateString(),
     },
     {
-      title: 'Конец',
+      title: t('events.ends'),
       dataIndex: 'ends_at',
       key: 'ends_at',
       render: (val: string) => new Date(val).toLocaleDateString(),
     },
     {
-      title: 'Действия',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           <Popconfirm
-            title="Удалить это событие?"
+            title={t('events.deletePrompt')}
+            okText={t('common.yes')}
+            cancelText={t('common.no')}
             onConfirm={() => handleDelete(record.id)}
           >
             <Button danger size="small" icon={<DeleteOutlined />} />
@@ -226,17 +233,17 @@ export default function EventsPage() {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <Title level={4} className="!mb-0">
-          События
+          {t('events.title')}
         </Title>
         <div className="flex flex-1 items-center justify-end gap-3">
           <Input.Search
-            placeholder="Поиск по названию или месту"
+            placeholder={t('events.searchPlaceholder')}
             allowClear
             onSearch={handleSearch}
             style={{ maxWidth: 320 }}
           />
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            Добавить событие
+            {t('events.addEvent')}
           </Button>
         </div>
       </div>
@@ -257,27 +264,35 @@ export default function EventsPage() {
       />
 
       <Modal
-        title={editing ? 'Редактировать событие' : 'Добавить событие'}
+        title={editing ? t('events.editEvent') : t('events.addEvent')}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         confirmLoading={submitting}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
       >
         <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="title" label="Название" rules={[{ required: true }]}>
+          <Form.Item name="title" label={`${t('events.eventTitle')} (RU)`} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="description" label="Описание" rules={[{ required: true }]}>
+          <Form.Item name="title_kk" label={`${t('events.eventTitle')} (KK)`}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="description" label={`${t('events.description')} (RU)`} rules={[{ required: true }]}>
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item name="location" label="Место проведения" rules={[{ required: true }]}>
+          <Form.Item name="description_kk" label={`${t('events.description')} (KK)`}>
+            <Input.TextArea rows={3} />
+          </Form.Item>
+          <Form.Item name="location" label={t('events.locationFull')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           {!editing ? (
             <Form.Item
-              label="Обложка"
+              label={t('events.cover')}
               required
-              help={createCoverFile ? undefined : 'Обязательно'}
+              help={createCoverFile ? undefined : t('events.required')}
               validateStatus={createCoverFile ? 'success' : undefined}
             >
               <Upload
@@ -290,11 +305,11 @@ export default function EventsPage() {
                 accept="image/*"
                 listType="picture"
               >
-                <Button icon={<UploadOutlined />}>Выбрать обложку</Button>
+                <Button icon={<UploadOutlined />}>{t('events.chooseCover')}</Button>
               </Upload>
             </Form.Item>
           ) : (
-            <Form.Item label="Обложка">
+            <Form.Item label={t('events.cover')}>
               <Space direction="vertical">
                 {editing.cover_url && !editCoverFile && (
                   <img src={editing.cover_url} alt="cover" className="w-24 h-24 object-cover rounded border" />
@@ -310,13 +325,13 @@ export default function EventsPage() {
                   listType="picture"
                 >
                   <Button icon={<UploadOutlined />}>
-                    {editing.cover_url ? 'Заменить обложку' : 'Загрузить обложку'}
+                    {editing.cover_url ? t('events.replaceCover') : t('events.uploadCover')}
                   </Button>
                 </Upload>
               </Space>
             </Form.Item>
           )}
-          <Form.Item name="dates" label="Период" rules={[{ required: true }]}>
+          <Form.Item name="dates" label={t('events.period')} rules={[{ required: true }]}>
             <RangePicker className="!w-full" showTime />
           </Form.Item>
         </Form>

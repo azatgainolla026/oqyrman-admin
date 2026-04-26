@@ -6,6 +6,7 @@ import { Layout, Menu, Button, Typography, Drawer } from 'antd'
 import { MenuOutlined } from '@ant-design/icons'
 import type { ItemType } from 'antd/es/menu/interface'
 import ProfileDropdown from '@/components/ProfileDropdown'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 const { Header, Sider, Content } = Layout
 const { Text } = Typography
@@ -134,7 +135,10 @@ export default function SidebarLayout({
               />
             )}
           </div>
-          <ProfileDropdown />
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <ProfileDropdown />
+          </div>
         </Header>
 
         <Content

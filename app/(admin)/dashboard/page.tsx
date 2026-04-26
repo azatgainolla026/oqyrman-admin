@@ -23,20 +23,16 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import type { AdminStats } from '@/lib/types'
 
 const { Title } = Typography
 
 const PIE_COLORS = ['#1E5945', '#f59e0b', '#4fd1a5']
-const BAR_COLORS: Record<string, string> = {
-  Пользователи: '#1E5945',
-  Книги: '#2a7a5e',
-  Авторы: '#14b8a6',
-  Отзывы: '#f59e0b',
-}
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -49,37 +45,37 @@ export default function DashboardPage() {
 
   const cards = [
     {
-      title: 'Пользователей',
+      title: t('dashboard.usersTotal'),
       value: stats?.users_total,
       icon: <UserOutlined className="text-blue-500 text-2xl" />,
     },
     {
-      title: 'Книг',
+      title: t('dashboard.booksTotal'),
       value: stats?.books_total,
       icon: <BookOutlined className="text-purple-500 text-2xl" />,
     },
     {
-      title: 'Авторов',
+      title: t('dashboard.authorsTotal'),
       value: stats?.authors_total,
       icon: <EditOutlined className="text-teal-500 text-2xl" />,
     },
     {
-      title: 'Броней всего',
+      title: t('dashboard.reservationsTotal'),
       value: stats?.reservations_total,
       icon: <CalendarOutlined className="text-orange-500 text-2xl" />,
     },
     {
-      title: 'Активных броней',
+      title: t('dashboard.activeReservations'),
       value: stats?.reservations_active,
       icon: <CheckCircleOutlined className="text-emerald-500 text-2xl" />,
     },
     {
-      title: 'Ожидающих броней',
+      title: t('dashboard.pendingReservations'),
       value: stats?.reservations_pending,
       icon: <ClockCircleOutlined className="text-amber-500 text-2xl" />,
     },
     {
-      title: 'Отзывов',
+      title: t('dashboard.reviewsTotal'),
       value: stats?.reviews_total,
       icon: <StarOutlined className="text-yellow-500 text-2xl" />,
     },
@@ -91,23 +87,35 @@ export default function DashboardPage() {
     (stats?.reservations_pending ?? 0)
 
   const pieData = [
-    { name: 'Активные', value: stats?.reservations_active ?? 0 },
-    { name: 'Ожидают', value: stats?.reservations_pending ?? 0 },
-    { name: 'Завершённые', value: completedReservations },
+    { name: t('dashboard.statusActive'), value: stats?.reservations_active ?? 0 },
+    { name: t('dashboard.statusPending'), value: stats?.reservations_pending ?? 0 },
+    { name: t('dashboard.statusCompleted'), value: completedReservations },
   ]
   const pieDataNonZero = pieData.filter((item) => item.value > 0)
 
+  const usersLabel = t('dashboard.chartUsers')
+  const booksLabel = t('dashboard.chartBooks')
+  const authorsLabel = t('dashboard.chartAuthors')
+  const reviewsLabel = t('dashboard.chartReviews')
+
+  const BAR_COLORS: Record<string, string> = {
+    [usersLabel]: '#1E5945',
+    [booksLabel]: '#2a7a5e',
+    [authorsLabel]: '#14b8a6',
+    [reviewsLabel]: '#f59e0b',
+  }
+
   const barData = [
-    { name: 'Пользователи', value: stats?.users_total ?? 0 },
-    { name: 'Книги', value: stats?.books_total ?? 0 },
-    { name: 'Авторы', value: stats?.authors_total ?? 0 },
-    { name: 'Отзывы', value: stats?.reviews_total ?? 0 },
+    { name: usersLabel, value: stats?.users_total ?? 0 },
+    { name: booksLabel, value: stats?.books_total ?? 0 },
+    { name: authorsLabel, value: stats?.authors_total ?? 0 },
+    { name: reviewsLabel, value: stats?.reviews_total ?? 0 },
   ]
 
   return (
     <div>
       <Title level={4} className="!mb-6">
-        Главная
+        {t('dashboard.title')}
       </Title>
 
       <Row gutter={[16, 16]}>
@@ -131,7 +139,7 @@ export default function DashboardPage() {
       {!loading && stats && (
         <Row gutter={[16, 16]} className="mt-4">
           <Col xs={24} lg={12}>
-            <Card title="Распределение броней">
+            <Card title={t('dashboard.reservationDistribution')}>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
@@ -162,14 +170,14 @@ export default function DashboardPage() {
           </Col>
 
           <Col xs={24} lg={12}>
-            <Card title="Общая статистика">
+            <Card title={t('dashboard.overallStats')}>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={barData}>
                   <XAxis dataKey="name" />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
                   <Legend />
-                  <Bar dataKey="value" name="Количество" radius={[4, 4, 0, 0]}>
+                  <Bar dataKey="value" name={t('dashboard.chartCount')} radius={[4, 4, 0, 0]}>
                     {barData.map((entry) => (
                       <Cell
                         key={entry.name}

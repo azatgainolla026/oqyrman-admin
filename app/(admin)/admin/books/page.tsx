@@ -16,14 +16,25 @@ import {
   Select,
   Image,
 } from 'antd'
-import { PlusOutlined, EditOutlined, DeleteOutlined, PictureOutlined, FileTextOutlined, BookOutlined, UploadOutlined, SearchOutlined } from '@ant-design/icons'
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  PictureOutlined,
+  FileTextOutlined,
+  BookOutlined,
+  UploadOutlined,
+  SearchOutlined,
+} from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
+import { useTranslation } from 'react-i18next'
 import api from '@/lib/api'
 import type { Book, BookViewResponse, Author, Genre, PaginatedResponse } from '@/lib/types'
 
 const { Title } = Typography
 
 export default function BooksPage() {
+  const { t } = useTranslation()
   const [books, setBooks] = useState<BookViewResponse[]>([])
   const [authors, setAuthors] = useState<Author[]>([])
   const [genres, setGenres] = useState<Genre[]>([])
@@ -43,55 +54,50 @@ export default function BooksPage() {
   const [form] = Form.useForm()
   const pageSize = 20
 
-  const fetchBooks = useCallback(async (p: number, q?: string, genreId?: string) => {
-    setLoading(true)
-    try {
-      // Swagger-aligned endpoints:
-      // - q -> GET /books/search?q=...
-      // - genreId -> GET /books/genre/{genre_id}
-      // - no filters -> GET /books
-      const params: Record<string, unknown> = { limit: pageSize, offset: (p - 1) * pageSize }
-      const endpoint = q ? '/books/search' : genreId ? `/books/genre/${genreId}` : '/books'
+  const fetchBooks = useCallback(
+    async (p: number, q?: string, genreId?: string) => {
+      setLoading(true)
+      try {
+        const params: Record<string, unknown> = { limit: pageSize, offset: (p - 1) * pageSize }
+        const endpoint = q ? '/books/search' : genreId ? `/books/genre/${genreId}` : '/books'
 
-      const requestConfig = q
-        ? { params: { ...params, q } }
-        : endpoint.startsWith('/books/genre/')
-          ? undefined
-          : { params }
+        const requestConfig = q
+          ? { params: { ...params, q } }
+          : endpoint.startsWith('/books/genre/')
+            ? undefined
+            : { params }
 
-      const { data } = requestConfig
-        ? await api.get<PaginatedResponse<BookViewResponse> | BookViewResponse[] | unknown>(endpoint, requestConfig)
-        : await api.get<PaginatedResponse<BookViewResponse> | BookViewResponse[] | unknown>(endpoint)
+        const { data } = requestConfig
+          ? await api.get<PaginatedResponse<BookViewResponse> | BookViewResponse[] | unknown>(endpoint, requestConfig)
+          : await api.get<PaginatedResponse<BookViewResponse> | BookViewResponse[] | unknown>(endpoint)
 
-      const dataObj = data as { items?: BookViewResponse[]; total?: number; offset?: number; limit?: number }
-      const items: BookViewResponse[] = Array.isArray(data) ? data : dataObj.items ?? []
-      const isGenreEndpoint = !q && !!genreId
-      const serverHasPagination =
-        isGenreEndpoint && (typeof dataObj.offset === 'number' || typeof dataObj.limit === 'number')
+        const dataObj = data as { items?: BookViewResponse[]; total?: number; offset?: number; limit?: number }
+        const items: BookViewResponse[] = Array.isArray(data) ? data : dataObj.items ?? []
+        const isGenreEndpoint = !q && !!genreId
+        const serverHasPagination =
+          isGenreEndpoint && (typeof dataObj.offset === 'number' || typeof dataObj.limit === 'number')
 
-      // If the server returns a plain list for /books/genre/{genre_id}, paginate on the client.
-      const start = (p - 1) * pageSize
-      const paginatedItems = isGenreEndpoint && !serverHasPagination ? items.slice(start, start + pageSize) : items
+        const start = (p - 1) * pageSize
+        const paginatedItems = isGenreEndpoint && !serverHasPagination ? items.slice(start, start + pageSize) : items
 
-      const filteredItems = q && genreId ? paginatedItems.filter((b) => b.genre?.id === genreId) : paginatedItems
+        const filteredItems = q && genreId ? paginatedItems.filter((b) => b.genre?.id === genreId) : paginatedItems
 
-      setBooks(filteredItems)
-      setTotal(isGenreEndpoint && !serverHasPagination ? items.length : dataObj.total ?? filteredItems.length)
-
-      // Do NOT prefetch files per book here (would be N+1 requests).
-    } catch {
-      message.error('Не удалось загрузить книги')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+        setBooks(filteredItems)
+        setTotal(isGenreEndpoint && !serverHasPagination ? items.length : dataObj.total ?? filteredItems.length)
+      } catch {
+        message.error(t('books.loadFailed'))
+      } finally {
+        setLoading(false)
+      }
+    },
+    [t]
+  )
 
   useEffect(() => {
     fetchBooks(page, searchQuery, genreFilter)
   }, [page, fetchBooks, searchQuery, genreFilter])
 
   useEffect(() => {
-    // Load authors and genres for the form selects
     api
       .get<PaginatedResponse<Author>>('/authors', { params: { limit: 200 } })
       .then(({ data }) => setAuthors(data.items))
@@ -140,7 +146,7 @@ export default function BooksPage() {
     const values = await form.validateFields()
 
     if (!editing && !createCoverFile) {
-      message.error('Загрузите обложку книги')
+      message.error(t('books.coverRequired'))
       return
     }
 
@@ -148,7 +154,7 @@ export default function BooksPage() {
     try {
       if (editing) {
         await api.put(`/admin/books/${editing.id}`, values)
-        message.success('Книга обновлена')
+        message.success(t('books.bookUpdated'))
       } else {
         const formData = new FormData()
         formData.append('title', values.title)
@@ -162,25 +168,24 @@ export default function BooksPage() {
         if (createCoverFile) formData.append('cover', createCoverFile)
 
         const { data: newBook } = await api.post<Book>('/admin/books', formData)
-        message.success('Книга добавлена')
+        message.success(t('books.bookCreated'))
 
-        // Upload book file if provided
         if (createBookFile) {
           const fileData = new FormData()
           fileData.append('book_id', newBook.id)
           fileData.append('file', createBookFile)
           try {
             await api.post('/admin/book-files/upload', fileData)
-            message.success('Файл книги загружен')
+            message.success(t('books.fileBookUploaded'))
           } catch {
-            message.warning('Книга добавлена, но файл не загружен')
+            message.warning(t('books.fileBookUploadWarn'))
           }
         }
       }
       setModalOpen(false)
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Не удалось сохранить книгу')
+      message.error(t('books.saveFailed'))
     } finally {
       setSubmitting(false)
     }
@@ -189,10 +194,10 @@ export default function BooksPage() {
   const handleDelete = async (id: string) => {
     try {
       await api.delete(`/admin/books/${id}`)
-      message.success('Книга удалена')
+      message.success(t('books.bookDeleted'))
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Не удалось удалить книгу')
+      message.error(t('books.deleteFailed'))
     }
   }
 
@@ -201,10 +206,10 @@ export default function BooksPage() {
     formData.append('cover', file)
     try {
       await api.post(`/admin/books/${bookId}/cover`, formData)
-      message.success('Обложка загружена')
+      message.success(t('books.coverUploaded'))
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Не удалось загрузить обложку')
+      message.error(t('books.coverUploadFailed'))
     }
   }
 
@@ -216,7 +221,7 @@ export default function BooksPage() {
 
   const handleFileUpload = async () => {
     if (!fileUploadFile) {
-      message.error('Выберите файл')
+      message.error(t('books.selectFilePrompt'))
       return
     }
     const formData = new FormData()
@@ -224,17 +229,17 @@ export default function BooksPage() {
     formData.append('file', fileUploadFile)
     try {
       await api.post('/admin/book-files/upload', formData)
-      message.success('Файл загружен')
+      message.success(t('books.fileUploaded'))
       setFileModalOpen(false)
       fetchBooks(page, searchQuery, genreFilter)
     } catch {
-      message.error('Не удалось загрузить файл')
+      message.error(t('books.fileUploadFailed'))
     }
   }
 
   const columns: ColumnsType<BookViewResponse> = [
     {
-      title: 'Обложка',
+      title: t('books.cover'),
       key: 'cover',
       width: 70,
       fixed: 'left',
@@ -259,27 +264,27 @@ export default function BooksPage() {
           </div>
         ),
     },
-    { title: 'Название', dataIndex: 'title', key: 'title', ellipsis: true, fixed: 'left', width: 200 },
+    { title: t('books.bookTitle'), dataIndex: 'title', key: 'title', ellipsis: true, fixed: 'left', width: 200 },
     {
-      title: 'Автор',
+      title: t('books.author'),
       key: 'author',
       width: 150,
       ellipsis: true,
       render: (_, record) => record.author?.name ?? '—',
     },
     {
-      title: 'Жанр',
+      title: t('books.genre'),
       key: 'genre',
       width: 120,
       ellipsis: true,
       render: (_, record) => record.genre?.name ?? '—',
     },
-    { title: 'Год', dataIndex: 'year', key: 'year', width: 70 },
-    { title: 'Страниц', dataIndex: 'total_pages', key: 'total_pages', width: 80, align: 'center', render: (v: number) => v ?? '—' },
-    { title: 'ISBN', dataIndex: 'isbn', key: 'isbn', width: 160 },
-    { title: 'Язык', dataIndex: 'language', key: 'language', width: 90, align: 'center' },
+    { title: t('books.year'), dataIndex: 'year', key: 'year', width: 70 },
+    { title: t('books.pages'), dataIndex: 'total_pages', key: 'total_pages', width: 80, align: 'center', render: (v: number) => v ?? '—' },
+    { title: t('books.isbn'), dataIndex: 'isbn', key: 'isbn', width: 160 },
+    { title: t('books.language'), dataIndex: 'language', key: 'language', width: 90, align: 'center' },
     {
-      title: 'Рейтинг',
+      title: t('books.rating'),
       dataIndex: 'avg_rating',
       key: 'avg_rating',
       width: 70,
@@ -287,7 +292,7 @@ export default function BooksPage() {
       render: (val: number) => val?.toFixed(1) ?? '—',
     },
     {
-      title: 'Действия',
+      title: t('common.actions'),
       key: 'actions',
       width: 180,
       fixed: 'right',
@@ -306,19 +311,21 @@ export default function BooksPage() {
             <Button
               size="small"
               icon={<PictureOutlined />}
-              title="Загрузить обложку"
+              title={t('books.uploadCoverHint')}
               className={record.cover_url ? '!text-green-500 !border-green-300' : ''}
             />
           </Upload>
           <Button
             size="small"
             icon={<FileTextOutlined />}
-            title="Загрузить файл книги"
+            title={t('books.uploadBookFileHint')}
             onClick={() => openFileUpload(record.id)}
             className={record.file ? '!text-green-500 !border-green-300' : ''}
           />
           <Popconfirm
-            title="Удалить эту книгу?"
+            title={t('books.deletePrompt')}
+            okText={t('common.yes')}
+            cancelText={t('common.no')}
             onConfirm={() => handleDelete(record.id)}
           >
             <Button danger size="small" icon={<DeleteOutlined />} />
@@ -332,16 +339,16 @@ export default function BooksPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <Title level={4} className="!mb-0">
-          Книги
+          {t('books.title')}
         </Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Добавить книгу
+          {t('books.addBook')}
         </Button>
       </div>
 
       <div className="flex items-center gap-4 mb-4">
         <Input.Search
-          placeholder="Поиск по названию или автору"
+          placeholder={t('books.searchPlaceholder')}
           allowClear
           enterButton={<SearchOutlined />}
           onSearch={handleSearch}
@@ -349,7 +356,7 @@ export default function BooksPage() {
         />
         <Select
           allowClear
-          placeholder="Фильтр по жанру"
+          placeholder={t('books.filterByGenre')}
           style={{ minWidth: 180 }}
           options={genres.map((g) => ({ value: g.id, label: g.name }))}
           onChange={handleGenreFilter}
@@ -373,67 +380,69 @@ export default function BooksPage() {
       />
 
       <Modal
-        title={editing ? 'Редактировать книгу' : 'Добавить книгу'}
+        title={editing ? t('books.editBook') : t('books.addBook')}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
         confirmLoading={submitting}
         width={600}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
       >
         <Form form={form} layout="vertical" className="mt-4">
-          <Form.Item name="title" label="Название" rules={[{ required: true }]}>
+          <Form.Item name="title" label={t('books.bookTitle')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="author_id" label="Автор" rules={[{ required: true }]}>
+          <Form.Item name="author_id" label={t('books.author')} rules={[{ required: true }]}>
             <Select
               showSearch
-              placeholder="Выберите автора"
+              placeholder={t('books.selectAuthor')}
               options={authors.map((a) => ({ value: a.id, label: a.name }))}
               filterOption={(input, option) =>
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
               }
             />
           </Form.Item>
-          <Form.Item name="genre_id" label="Жанр" rules={[{ required: true }]}>
+          <Form.Item name="genre_id" label={t('books.genre')} rules={[{ required: true }]}>
             <Select
               showSearch
-              placeholder="Выберите жанр"
+              placeholder={t('books.selectGenre')}
               options={genres.map((g) => ({ value: g.id, label: g.name }))}
               filterOption={(input, option) =>
                 (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
               }
             />
           </Form.Item>
-          <Form.Item name="isbn" label="ISBN" rules={[{ required: true }]}>
+          <Form.Item name="isbn" label={t('books.isbn')} rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="description" label="Описание (RU)" rules={[{ required: true }]}>
+          <Form.Item name="description" label={t('books.descriptionRu')} rules={[{ required: true }]}>
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item name="description_kk" label="Описание (KK)">
-            <Input.TextArea rows={3} placeholder="Қазақша сипаттама (не обязательно)" />
+          <Form.Item name="description_kk" label={t('books.descriptionKk')}>
+            <Input.TextArea rows={3} placeholder={t('books.descriptionKkPlaceholder')} />
           </Form.Item>
           <div className="grid grid-cols-2 gap-4">
-            <Form.Item name="language" label="Язык" rules={[{ required: true }]}>
+            <Form.Item name="language" label={t('books.language')} rules={[{ required: true }]}>
               <Input placeholder="ru" />
             </Form.Item>
-            <Form.Item name="year" label="Год" rules={[{ required: true }]}>
+            <Form.Item name="year" label={t('books.year')} rules={[{ required: true }]}>
               <InputNumber className="!w-full" />
             </Form.Item>
           </div>
 
           {editing && (
-            <Form.Item name="total_pages" label="Страниц">
-              <InputNumber min={1} className="!w-full" placeholder="например, 320" />
+            <Form.Item name="total_pages" label={t('books.pages')}>
+              <InputNumber min={1} className="!w-full" placeholder={t('books.pagesPlaceholder')} />
             </Form.Item>
           )}
 
           {!editing && (
             <>
               <Form.Item
-                label="Обложка"
+                label={t('books.cover')}
                 required
-                help={createCoverFile ? undefined : 'Обязательно'}
+                help={createCoverFile ? undefined : t('books.required')}
                 validateStatus={createCoverFile ? 'success' : undefined}
               >
                 <Upload
@@ -446,13 +455,13 @@ export default function BooksPage() {
                   accept="image/*"
                   listType="picture"
                 >
-                  <Button icon={<UploadOutlined />}>Выбрать обложку</Button>
+                  <Button icon={<UploadOutlined />}>{t('books.chooseCover')}</Button>
                 </Upload>
               </Form.Item>
 
               <div className="border-t pt-4 mt-2">
                 <Typography.Text type="secondary" className="block mb-3">
-                  Файл книги (необязательно)
+                  {t('books.bookFile')}
                 </Typography.Text>
                 <Upload
                   beforeUpload={(file) => {
@@ -463,7 +472,7 @@ export default function BooksPage() {
                   maxCount={1}
                   accept=".pdf,.epub,.mp3"
                 >
-                  <Button icon={<UploadOutlined />}>Выбрать файл</Button>
+                  <Button icon={<UploadOutlined />}>{t('books.chooseFile')}</Button>
                 </Upload>
               </div>
             </>
@@ -472,10 +481,12 @@ export default function BooksPage() {
       </Modal>
 
       <Modal
-        title="Загрузить файл книги"
+        title={t('books.uploadFileTitle')}
         open={fileModalOpen}
         onOk={handleFileUpload}
         onCancel={() => setFileModalOpen(false)}
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
       >
         <Form layout="vertical" className="mt-4">
           <Upload
@@ -487,7 +498,7 @@ export default function BooksPage() {
             maxCount={1}
             accept=".pdf,.epub,.mp3"
           >
-            <Button icon={<PlusOutlined />}>Выбрать файл</Button>
+            <Button icon={<PlusOutlined />}>{t('books.chooseFile')}</Button>
           </Upload>
         </Form>
       </Modal>
